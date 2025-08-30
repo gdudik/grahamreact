@@ -10,7 +10,7 @@ dependencies = [
     "numpy (>=2.3.2,<3.0.0)",
     "matplotlib (>=3.10.6,<4.0.0)",
     "pyserial (>=3.5,<4.0)",
-    "fastapi (>=0.116.1,<0.117.0)"
+    "fastapi[standard] (>=0.116.1,<0.117.0)"
 ]
 
 
