@@ -23,6 +23,7 @@ if BLOCK_ID == 0:
 if BLOCK_ID > 10:
     raise ValueError(f'Illegal Block ID: {BLOCK_ID}')
 
+BROADCAST_ID = 0x99
 BAUD = 1000000
 
 TX_PIN = 0
@@ -94,46 +95,51 @@ def read_packet(timeout_ms=100):
 # --- Command Handlers ---
 
 
-def handle_ping():
+def handle_ping(is_broadcast: bool):
     print("PING received")
-    send_ack(CMD_PING)
+    if not is_broadcast:
+        send_ack(CMD_PING)
 
 
-def handle_arm(sensor_type, gender):
-    fifo_comms.setup(sensor_type, gender)
+def handle_arm(is_broadcast: bool):
+    global gun_sensor_type, current_gender
+    fifo_comms.setup(gun_sensor_type, current_gender)
 
 
-def handle_set():
+def handle_set(is_broadcast: bool):
     return fifo_comms.start_loop()
 
 
-def handle_dump():
+def handle_dump(is_broadcast: bool):
     print("DUMP request received")
     dump("overall_buffer.bin")
+    send_ack(CMD_DUMP)
 
 
-def handle_set_sensor(payload: bytes):
+def handle_set_sensor(is_broadcast: bool, payload: bytes):
     global gun_sensor_type
     try:
         s = payload.decode().strip()
         if s in ('NC', 'NO'):
             gun_sensor_type = s
             print(f"Sensor type set to: {s}")
-            send_ack(CMD_SET_SENSOR)
+            if not is_broadcast:
+                send_ack(CMD_SET_SENSOR)
         else:
             print("Invalid sensor type payload")
     except Exception as e:
         print("Decode error:", e)
 
 
-def handle_set_gender(payload: bytes):
+def handle_set_gender(is_broadcast: bool, payload: bytes):
     global current_gender
     try:
         s = payload.decode().strip()
         if s in ('M', 'F'):
             current_gender = s
             print(f"Gender set to: {s}")
-            send_ack(CMD_SET_GENDER)
+            if not is_broadcast:
+                send_ack(CMD_SET_GENDER)
         else:
             print("Invalid gender payload")
     except Exception as e:
@@ -185,26 +191,29 @@ def dump(filepath, chunk_size=256):
 def listen():
     print("Listening (binary protocol)...")
     while True:
+        is_broadcast = False
         result = read_packet()
         if not result:
             continue
 
         block_id, cmd, payload = result
-        if block_id != BLOCK_ID:
-            continue  # Not for this node
 
+        if block_id not in (BLOCK_ID, BROADCAST_ID):
+            continue  # Not for this node, not broadcast
+        if block_id == BROADCAST_ID:
+            is_broadcast = True
         if cmd == CMD_PING:
-            handle_ping()
+            handle_ping(is_broadcast)
         elif cmd == CMD_ARM:
-            handle_arm(gun_sensor_type, current_gender)
+            handle_arm(is_broadcast)
         elif cmd == CMD_SET:
-            handle_set()
+            handle_set(is_broadcast)
         elif cmd == CMD_DUMP:
-            handle_dump()
+            handle_dump(is_broadcast)
         elif cmd == CMD_SET_SENSOR:
-            handle_set_sensor(payload)
+            handle_set_sensor(is_broadcast, payload)
         elif cmd == CMD_SET_GENDER:
-            handle_set_gender(payload)
+            handle_set_gender(is_broadcast, payload)
         elif cmd == CMD_SEND_RT_REPORT:
             handle_send_rt_report()
         else:

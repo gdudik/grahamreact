@@ -15,6 +15,8 @@ CMD_SET_SENSOR = 0x05
 CMD_SET_GENDER = 0x06
 CMD_SEND_RT_REPORT = 0x07
 
+BROADCAST_ID = 0x99
+
 
 BLOCK_IDS = range(1, 11)  # block IDs 1 through 10
 SERIAL_PORT = '/dev/ttyUSB0'  # Adjust if using onboard UART
@@ -33,6 +35,15 @@ def build_gender_packet(block_id: int, gender: Literal['M', 'F']) -> bytes:
     header = bytes([STX, block_id, CMD_SET_GENDER, 1])
     packet = header + payload
     return packet + bytes([calc_checksum(packet)])
+
+def build_arm_packet() -> bytes:
+    header = bytes([STX, BROADCAST_ID, CMD_ARM, 0 ])
+    return header + bytes([calc_checksum(header)])
+
+def build_set_packet() -> bytes:
+    header = bytes([STX, BROADCAST_ID, CMD_SET, 0 ])
+    return header + bytes([calc_checksum(header)])
+
 
 def build_sensor_type_packet(block_id: int, sensor_type: Literal['NC', 'NO']) -> bytes:
     payload = sensor_type.encode('utf-8')
@@ -72,4 +83,15 @@ def ping_all_blocks():
                 print(f"No response from block {block_id:02d}")
             time.sleep(0.05)  # optional small gap between pings
 
+@app.get('/arm')
+def arm():
+    with serial.Serial(SERIAL_PORT, BAUD, timeout=0) as ser:
+        pkt = build_arm_packet()
+        ser.write(pkt)
+
+@app.get('/set')
+def set():
+    with serial.Serial(SERIAL_PORT, BAUD, timeout=0) as ser:
+        pkt = build_set_packet()
+        ser.write(pkt)
 
