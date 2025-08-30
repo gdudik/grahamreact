@@ -17,6 +17,12 @@ block_id_eights = Pin(DIP_PIN_EIGHTS, Pin.IN, Pin.PULL_DOWN)
 BLOCK_ID = block_id_ones.value() << 0 | block_id_twos.value(
 ) << 1 | block_id_fours.value() << 2 | block_id_eights.value() << 3
 
+if BLOCK_ID == 0:
+    BLOCK_ID = 10
+
+if BLOCK_ID > 10:
+    raise ValueError(f'Illegal Block ID: {BLOCK_ID}')
+
 BAUD = 1000000
 
 TX_PIN = 0
