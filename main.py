@@ -68,20 +68,31 @@ def read_response(ser: serial.Serial, expected_block_id: int) -> bytes:
                     return full + checksum
     return b''
 
-@app.get('/ping')
+@app.get("/ping")
 def ping_all_blocks():
+    results = []
+
     with serial.Serial(SERIAL_PORT, BAUD, timeout=0) as ser:
         for block_id in BLOCK_IDS:
             pkt = build_ping_packet(block_id)
             ser.write(pkt)
-            print(f"Sent PING to block {block_id:02d}")
 
             response = read_response(ser, block_id)
             if response:
-                print(f"Received valid response from block {block_id:02d}: {response.hex()}")
+                results.append({
+                    "block_id": block_id,
+                    "status": "ok",
+                    "response_hex": response.hex()
+                })
             else:
-                print(f"No response from block {block_id:02d}")
-            time.sleep(0.05)  # optional small gap between pings
+                results.append({
+                    "block_id": block_id,
+                    "status": "no_response"
+                })
+
+            time.sleep(0.05)  # small gap between pings
+
+    return {"results": results}
 
 @app.get('/arm')
 def arm():
