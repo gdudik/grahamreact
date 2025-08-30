@@ -103,7 +103,7 @@ def handle_set():
 
 def handle_dump():
     print("DUMP request received")
-    dump("accel.bin")
+    dump("overall_buffer.bin")
 
 
 def handle_set_sensor(payload: bytes):
@@ -205,4 +205,4 @@ def listen():
             print(f"Unknown command: {cmd}")
 
 # --- Start ---
-# listen()
+listen()

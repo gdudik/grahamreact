@@ -1,6 +1,9 @@
 import serial
 import time
 from typing import Literal
+from fastapi import FastAPI
+
+app = FastAPI()
 
 # --- COMMAND CODES ---
 STX = 0xAA
@@ -54,6 +57,7 @@ def read_response(ser: serial.Serial, expected_block_id: int) -> bytes:
                     return full + checksum
     return b''
 
+@app.get('/ping')
 def ping_all_blocks():
     with serial.Serial(SERIAL_PORT, BAUD, timeout=0) as ser:
         for block_id in BLOCK_IDS:
@@ -68,6 +72,4 @@ def ping_all_blocks():
                 print(f"No response from block {block_id:02d}")
             time.sleep(0.05)  # optional small gap between pings
 
-# --- Run it ---
-if __name__ == '__main__':
-    ping_all_blocks()
+
