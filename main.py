@@ -244,10 +244,25 @@ def get_reports():
 
 @app.get('/arm')
 def arm():
+    results = []
     abort_pin.off()
-    with serial.Serial(SERIAL_PORT, BAUD, timeout=0) as ser:
-        pkt = build_arm_packet()
-        ser.write(pkt)
+    for block_id in BLOCK_IDS:
+        with serial.Serial(SERIAL_PORT, BAUD, timeout=0) as ser:
+            pkt = build_arm_packet()
+            ser.write(pkt)
+            response = read_response(ser, block_id, CMD_ARM)
+            if response:
+                if response:
+                    results.append({
+                        "block_id": block_id,
+                        "status": "ok",
+                    })
+            else:
+                results.append({
+                    "block_id": block_id,
+                    "status": "no_response"
+                })
+
 
 
 @app.get('/set')

@@ -104,6 +104,7 @@ def handle_ping(is_broadcast: bool):
 def handle_arm(is_broadcast: bool):
     global gun_sensor_type, current_gender
     fifo_comms.setup(gun_sensor_type, current_gender)
+    send_ack(CMD_ARM)
 
 
 def handle_set(is_broadcast: bool):
