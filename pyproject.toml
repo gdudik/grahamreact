@@ -21,3 +21,9 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 package-mode = false
+
+[tool.poetry.group.dev.dependencies]
+poethepoet = "^0.37.0"
+
+[tool.poe.tasks]
+api = "fastapi dev main.py"
