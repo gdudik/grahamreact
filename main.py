@@ -113,35 +113,41 @@ def read_dump_chunks(ser: serial.Serial, expected_block_id: int, timeout_seconds
     file_data = b''
     start_time = time.time()
     chunk_count = 0
-    checksum_failures = 0
     
     while time.time() - start_time < timeout_seconds:
         if ser.read(1) == bytes([STX]):
             # Read header with blocking read
             header = read_exact_bytes(ser, 3, 1.0)
             if not header or len(header) < 3:
+                incomplete_reads += 1
+                print(f"Incomplete header read (got {len(header)} bytes)")
                 continue
             
             block_id, cmd, length = header
             
             # Check if this is the expected block and command
             if block_id != expected_block_id or cmd != CMD_DUMP:
+                wrong_packets += 1
+                print(f"Wrong packet: block_id={block_id} (expected {expected_block_id}), cmd={cmd} (expected {CMD_DUMP})")
                 continue
                 
             # If length is 0, this is the ACK packet (end of transmission)
             if length == 0:
+                print(f"Received ACK packet from block {expected_block_id}")
                 # Read and verify checksum for the ACK packet
                 checksum = read_exact_bytes(ser, 1, 1.0)
                 full = bytes([STX]) + header
                 if checksum and len(checksum) == 1 and checksum[0] == calc_checksum(full):
-                    if checksum_failures > 0:
-                        print(f"Block {expected_block_id}: {checksum_failures} checksum failures detected")
                     break
+                else:
+                    print(f"ACK checksum invalid: got {checksum[0] if checksum and len(checksum) > 0 else 'None'}, expected {calc_checksum(full)}")
                 continue
             
             # Read the chunk payload with blocking read
             payload = read_exact_bytes(ser, length, 2.0)
             if not payload or len(payload) != length:
+                incomplete_reads += 1
+                print(f"Incomplete payload read: got {len(payload) if payload else 0} bytes, expected {length}")
                 continue
                 
             # Read and verify checksum with blocking read
@@ -152,13 +158,10 @@ def read_dump_chunks(ser: serial.Serial, expected_block_id: int, timeout_seconds
             if checksum and len(checksum) == 1 and checksum[0] == expected_checksum:
                 chunk_count += 1
                 file_data += payload
+                if chunk_count % 50 == 0:  # Log every 50th chunk to reduce spam
+                    print(f"Chunk {chunk_count}: {length} bytes received (total: {len(file_data)} bytes)")
                 # Reset timeout for next chunk
                 start_time = time.time()
-            else:
-                checksum_failures += 1
-                if checksum_failures <= 5:  # Only show first 5 failures to avoid spam
-                    actual_checksum = checksum[0] if checksum and len(checksum) > 0 else None
-                    print(f"Block {expected_block_id}: Checksum failure #{checksum_failures} - got {actual_checksum}, expected {expected_checksum}")
             
     return file_data
 
