@@ -1,0 +1,4 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "react_schematics-eagle-import")(type "KiCad")(uri "${KIPRJMOD}/react_schematics-eagle-import.kicad_sym")(options "")(descr ""))
+)

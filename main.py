@@ -1,6 +1,7 @@
 import serial
 import time
 from typing import Literal
+from gpiozero import OutputDevice
 from fastapi import FastAPI
 
 app = FastAPI()
@@ -17,18 +18,23 @@ CMD_SEND_RT_REPORT = 0x07
 
 BROADCAST_ID = 0x99
 
+abort_pin = OutputDevice(17)
+abort_pin.off()
 
 BLOCK_IDS = range(1, 11)  # block IDs 1 through 10
 SERIAL_PORT = '/dev/ttyUSB0'  # Adjust if using onboard UART
 BAUD = 1000000
 TIMEOUT = 0.2  # seconds
 
+
 def calc_checksum(data: bytes) -> int:
     return sum(data) % 256
+
 
 def build_ping_packet(block_id: int) -> bytes:
     header = bytes([STX, block_id, CMD_PING, 0])  # 0-length payload
     return header + bytes([calc_checksum(header)])
+
 
 def build_gender_packet(block_id: int, gender: Literal['M', 'F']) -> bytes:
     payload = gender.encode('utf-8')
@@ -36,12 +42,14 @@ def build_gender_packet(block_id: int, gender: Literal['M', 'F']) -> bytes:
     packet = header + payload
     return packet + bytes([calc_checksum(packet)])
 
+
 def build_arm_packet() -> bytes:
-    header = bytes([STX, BROADCAST_ID, CMD_ARM, 0 ])
+    header = bytes([STX, BROADCAST_ID, CMD_ARM, 0])
     return header + bytes([calc_checksum(header)])
 
+
 def build_set_packet() -> bytes:
-    header = bytes([STX, BROADCAST_ID, CMD_SET, 0 ])
+    header = bytes([STX, BROADCAST_ID, CMD_SET, 0])
     return header + bytes([calc_checksum(header)])
 
 
@@ -51,7 +59,13 @@ def build_sensor_type_packet(block_id: int, sensor_type: Literal['NC', 'NO']) ->
     packet = header + payload
     return packet + bytes([calc_checksum(packet)])
 
-def read_response(ser: serial.Serial, expected_block_id: int) -> bytes:
+
+def build_send_report_packet(block_id: int) -> bytes:
+    header = bytes([STX, block_id, CMD_SEND_RT_REPORT, 0])
+    return header + bytes([calc_checksum(header)])
+
+
+def read_response(ser: serial.Serial, expected_block_id: int, return_cmd) -> bytes:
     start = time.time()
     while time.time() - start < TIMEOUT:
         if ser.read(1) == bytes([STX]):
@@ -64,12 +78,14 @@ def read_response(ser: serial.Serial, expected_block_id: int) -> bytes:
 
             full = bytes([STX]) + header + payload
             if checksum and checksum[0] == calc_checksum(full):
-                if block_id == expected_block_id and cmd == CMD_PING:
+                if block_id == expected_block_id and cmd == return_cmd:
                     return full + checksum
     return b''
 
-@app.get("/ping")
+
+@app.get('/ping')
 def ping_all_blocks():
+    abort_pin.off()
     results = []
 
     with serial.Serial(SERIAL_PORT, BAUD, timeout=0) as ser:
@@ -77,12 +93,11 @@ def ping_all_blocks():
             pkt = build_ping_packet(block_id)
             ser.write(pkt)
 
-            response = read_response(ser, block_id)
+            response = read_response(ser, block_id, CMD_PING)
             if response:
                 results.append({
                     "block_id": block_id,
                     "status": "ok",
-                    "response_hex": response.hex()
                 })
             else:
                 results.append({
@@ -94,15 +109,54 @@ def ping_all_blocks():
 
     return {"results": results}
 
+
+@app.get('/rt_report')
+def get_reports():
+    results = []
+
+    with serial.Serial(SERIAL_PORT, BAUD, timeout=0) as ser:
+        for block_id in BLOCK_IDS:
+            pkt = build_send_report_packet(block_id)
+            ser.write(pkt)
+
+            response = read_response(ser, block_id, CMD_SEND_RT_REPORT)
+            # response format [STX, BLOCK_ID, CMD_SEND_RT_REPORT, 0x43, 0x41, len(payload)]) + payload
+            # in this case, payload is calculated_reaction.to_bytes(3, 'big') **in microseconds**
+            # status codes: CA (calculated), NG (no gun), NR (no reaction), ND (no data)
+            if response:
+                status_code = response[3:5].decode()
+                payload_len = response[5]
+                reaction = int.from_bytes(
+                    response[6:6+payload_len], byteorder='big', signed=True) / 1_000_000
+                results.append({
+                    "block_id": block_id,
+                    "status": status_code,
+                    "reaction": reaction
+                })
+            else:
+                results.append({
+                    "block_id": block_id,
+                    "status": "no_response_from_block"
+                })
+            time.sleep(0.05)
+    return {"results": results}
+
+
 @app.get('/arm')
 def arm():
+    abort_pin.off()
     with serial.Serial(SERIAL_PORT, BAUD, timeout=0) as ser:
         pkt = build_arm_packet()
         ser.write(pkt)
+
 
 @app.get('/set')
 def set():
     with serial.Serial(SERIAL_PORT, BAUD, timeout=0) as ser:
         pkt = build_set_packet()
         ser.write(pkt)
+
+@app.get('/abort')
+def abort_run():
+    abort_pin.on()
 

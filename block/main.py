@@ -37,7 +37,7 @@ BOOT_LIGHT.value(1)
 STX = 0xAA
 CMD_PING = 0x01
 CMD_ARM = 0x02
-CMD_SET = 0x03 
+CMD_SET = 0x03
 CMD_DUMP = 0x04
 CMD_SET_SENSOR = 0x05
 CMD_SET_GENDER = 0x06
@@ -153,7 +153,7 @@ def handle_send_rt_report():
         calculated_reaction = int(
             ((rt_timestamp - gun_timestamp) * 0.000030517578125 * 1_000_000))
         b = calculated_reaction.to_bytes(3, 'big')
-        # CALC + calculated reaction time
+        # CA (calc) + calculated reaction time
         packet = bytes(
             [STX, BLOCK_ID, CMD_SEND_RT_REPORT, 0x43, 0x41, len(b)]) + b
         packet += bytes([calc_checksum(packet)])
@@ -166,7 +166,8 @@ def handle_send_rt_report():
                        0x4E, 0x52])  # NR--no reaction
         packet += bytes([calc_checksum(packet)])
     elif rt_timestamp is None and gun_timestamp is None:
-        packet = bytes([STX, BLOCK_ID, CMD_SEND_RT_REPORT, 0x4E, 0x44])
+        packet = bytes([STX, BLOCK_ID, CMD_SEND_RT_REPORT,
+                       0x4E, 0x44])  # ND--no data
         packet += bytes([calc_checksum(packet)])
     send(packet)
 
@@ -218,6 +219,7 @@ def listen():
             handle_send_rt_report()
         else:
             print(f"Unknown command: {cmd}")
+
 
 # --- Start ---
 listen()

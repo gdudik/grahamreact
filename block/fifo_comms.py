@@ -52,17 +52,25 @@ THRESHOLD_PIN = micropython.const(22) #Driven high by imu when threshold is hit,
 int_pin = Pin(THRESHOLD_PIN, Pin.IN)
 
 ## GUN INTERRUPT PIN
+## Input that gun has fired
 GUN_PIN = micropython.const(10)
 gun_int_pin = None
 gun_timestamp = None
 gun_triggered = False
 
-## ALERT PIN 
+## ALERT PIN
+## Output that a false start has occurred
 ALERT_PIN = micropython.const(15)
 fs_alert = Pin(ALERT_PIN, Pin.OUT, Pin.PULL_DOWN)
 
 GUN_FIRED_PIN = micropython.const(12)
-gun_fired = Pin(GUN_FIRED_PIN, Pin.OUT, Pin.PULL_DOWN)
+gun_fired = Pin(GUN_FIRED_PIN, Pin.OUT)
+
+## ABORT PIN
+## Abort the run early due to operator cancel
+ABORT_PIN = micropython.const(27)
+run_aborted = Pin(ABORT_PIN, Pin.IN)
+# Push/pull driven by rpi controller. No pullup/pulldown necessary
 
 ## FIFO THRESHOLD INTERRUPT HANDLER
 @micropython.native
@@ -259,6 +267,8 @@ def start_loop():
         if runner_started_ts:
             if time.ticks_diff(time.ticks_ms(), runner_started_ts) > 1000:
                 break
+        if run_aborted.value() == 1:
+            break
     imu.write_reg(0x4E, 0x00)   
     read_fifo_dump()
 
