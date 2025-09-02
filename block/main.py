@@ -2,6 +2,16 @@ from machine import Pin, UART
 import time
 import fifo_comms
 
+# --- DEBUG LOGGING ---
+def debug_log(message):
+    """Write debug message to log file with timestamp."""
+    try:
+        timestamp = time.ticks_ms()
+        with open("dump_debug.log", "a") as f:
+            f.write(f"[{timestamp}] {message}\n")
+    except:
+        pass  # Don't let logging errors break the main functionality
+
 # --- CONFIGURATION ---
 
 DIP_PIN_ONES = 6
@@ -112,9 +122,12 @@ def handle_set(is_broadcast: bool):
 
 
 def handle_dump(is_broadcast: bool):
+    debug_log(f"DUMP command received, block_id={BLOCK_ID}, broadcast={is_broadcast}")
     print("DUMP request received")
     dump("overall_buffer.bin")
+    debug_log("DUMP transmission completed, sending ACK")
     send_ack(CMD_DUMP)
+    debug_log("ACK sent for DUMP command")
 
 
 def handle_set_sensor(is_broadcast: bool, payload: bytes):
@@ -173,19 +186,50 @@ def handle_send_rt_report():
     send(packet)
 
 
-def dump(filepath, chunk_size=256):
+def dump(filepath, chunk_size=255):
+    debug_log(f"Starting dump of file: {filepath}")
+    chunk_count = 0
+    total_bytes = 0
+    
     try:
         with open(filepath, "rb") as f:
+            # Get file size for logging
+            try:
+                import os
+                file_size = os.stat(filepath)[6]  # st_size
+                debug_log(f"File opened: {filepath}, size: {file_size} bytes")
+            except:
+                debug_log(f"File opened: {filepath}")
+            
             while True:
-                chunk = f.read(chunk_size)
+                try:
+                    chunk = f.read(chunk_size)
+                except Exception as e:
+                    debug_log(f"ERROR reading chunk: {e}")
+                    break
+                
                 if not chunk:
                     break
-                packet = bytes([STX, BLOCK_ID, CMD_DUMP, len(chunk)]) + chunk
-                packet += bytes([calc_checksum(packet)])
-                send(packet)
+                
+                chunk_count += 1
+                total_bytes += len(chunk)
+                
+                try:
+                    packet = bytes([STX, BLOCK_ID, CMD_DUMP, len(chunk)]) + chunk
+                    packet += bytes([calc_checksum(packet)])
+                    send(packet)
+                    # Small delay to prevent overwhelming host serial buffer
+                    time.sleep_ms(5)
+                except Exception as e:
+                    debug_log(f"ERROR sending chunk {chunk_count}: {e}")
+                    break
+                
+        debug_log(f"Transmission complete: {chunk_count} chunks, {total_bytes} bytes")
         print("File transmission complete.")
-    except OSError as e:
-        print("Failed to open file:", e)
+        
+    except Exception as e:
+        debug_log(f"ERROR in dump function: {e}")
+        print("Failed to dump file:", e)
 
 
 # --- Main Loop ---
