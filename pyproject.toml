@@ -26,4 +26,4 @@ package-mode = false
 poethepoet = "^0.37.0"
 
 [tool.poe.tasks]
-api = "fastapi dev main.py"
+api = "fastapi dev main.py --host 0.0.0.0"
