@@ -113,6 +113,7 @@ def read_dump_chunks(ser: serial.Serial, expected_block_id: int, timeout_seconds
     file_data = b''
     start_time = time.time()
     chunk_count = 0
+    checksum_failures = 0
     
     while time.time() - start_time < timeout_seconds:
         if ser.read(1) == bytes([STX]):
@@ -133,6 +134,8 @@ def read_dump_chunks(ser: serial.Serial, expected_block_id: int, timeout_seconds
                 checksum = read_exact_bytes(ser, 1, 1.0)
                 full = bytes([STX]) + header
                 if checksum and len(checksum) == 1 and checksum[0] == calc_checksum(full):
+                    if checksum_failures > 0:
+                        print(f"Block {expected_block_id}: {checksum_failures} checksum failures detected")
                     break
                 continue
             
@@ -151,6 +154,11 @@ def read_dump_chunks(ser: serial.Serial, expected_block_id: int, timeout_seconds
                 file_data += payload
                 # Reset timeout for next chunk
                 start_time = time.time()
+            else:
+                checksum_failures += 1
+                if checksum_failures <= 5:  # Only show first 5 failures to avoid spam
+                    actual_checksum = checksum[0] if checksum and len(checksum) > 0 else None
+                    print(f"Block {expected_block_id}: Checksum failure #{checksum_failures} - got {actual_checksum}, expected {expected_checksum}")
             
     return file_data
 

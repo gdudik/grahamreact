@@ -34,7 +34,7 @@ if BLOCK_ID > 10:
     raise ValueError(f'Illegal Block ID: {BLOCK_ID}')
 
 BROADCAST_ID = 0x99
-BAUD = 1000000
+BAUD = 2000000
 
 TX_PIN = 0
 RX_PIN = 1
