@@ -3,3 +3,4 @@
 *.bin
 *.csv
 *.log
+*.pyc
