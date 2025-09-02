@@ -164,6 +164,9 @@ def dump_all_blocks():
         for block_id in BLOCK_IDS:
             print(f"Requesting dump from block {block_id}...")
             
+            # Start timer
+            start_time = time.time()
+            
             # Send dump command
             pkt = build_dump_packet(block_id)
             ser.write(pkt)
@@ -172,7 +175,15 @@ def dump_all_blocks():
             # The block sends data first, then ACK
             file_data = read_dump_chunks(ser, block_id)
             
+            # End timer and calculate duration
+            end_time = time.time()
+            duration = end_time - start_time
+            
             if file_data:
+                # Calculate throughput
+                throughput = len(file_data) / duration / 1024  # KB/s
+                print(f"Block {block_id}: {len(file_data)} bytes in {duration:.2f}s ({throughput:.1f} KB/s)")
+                
                 # Save to file
                 filename = f"block_{block_id}_dump.bin"
                 try:
@@ -195,6 +206,7 @@ def dump_all_blocks():
                         "bytes_received": len(file_data)
                     })
             else:
+                print(f"Block {block_id}: No data received in {duration:.2f}s")
                 results.append({
                     "block_id": block_id,
                     "status": "no_data_received",

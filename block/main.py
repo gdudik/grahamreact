@@ -218,8 +218,6 @@ def dump(filepath, chunk_size=255):
                     packet = bytes([STX, BLOCK_ID, CMD_DUMP, len(chunk)]) + chunk
                     packet += bytes([calc_checksum(packet)])
                     send(packet)
-                    # Small delay to prevent overwhelming host serial buffer
-                    time.sleep_ms(5)
                 except Exception as e:
                     debug_log(f"ERROR sending chunk {chunk_count}: {e}")
                     break
