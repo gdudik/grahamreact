@@ -34,7 +34,7 @@ if BLOCK_ID > 10:
     raise ValueError(f'Illegal Block ID: {BLOCK_ID}')
 
 BROADCAST_ID = 0x99
-BAUD = 1000000
+BAUD = 2000000
 
 TX_PIN = 0
 RX_PIN = 1
@@ -218,8 +218,6 @@ def dump(filepath, chunk_size=255):
                     packet = bytes([STX, BLOCK_ID, CMD_DUMP, len(chunk)]) + chunk
                     packet += bytes([calc_checksum(packet)])
                     send(packet)
-                    # Small delay to prevent overwhelming host serial buffer
-                    time.sleep_ms(5)
                 except Exception as e:
                     debug_log(f"ERROR sending chunk {chunk_count}: {e}")
                     break

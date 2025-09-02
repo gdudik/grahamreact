@@ -114,10 +114,6 @@ def read_dump_chunks(ser: serial.Serial, expected_block_id: int, timeout_seconds
     start_time = time.time()
     chunk_count = 0
     checksum_failures = 0
-    incomplete_reads = 0
-    wrong_packets = 0
-    
-    print(f"Starting chunk reception for block {expected_block_id}")
     
     while time.time() - start_time < timeout_seconds:
         if ser.read(1) == bytes([STX]):
@@ -143,7 +139,8 @@ def read_dump_chunks(ser: serial.Serial, expected_block_id: int, timeout_seconds
                 checksum = read_exact_bytes(ser, 1, 1.0)
                 full = bytes([STX]) + header
                 if checksum and len(checksum) == 1 and checksum[0] == calc_checksum(full):
-                    print(f"ACK checksum valid - transmission complete")
+                    if checksum_failures > 0:
+                        print(f"Block {expected_block_id}: {checksum_failures} checksum failures detected")
                     break
                 else:
                     print(f"ACK checksum invalid: got {checksum[0] if checksum and len(checksum) > 0 else 'None'}, expected {calc_checksum(full)}")
@@ -170,19 +167,10 @@ def read_dump_chunks(ser: serial.Serial, expected_block_id: int, timeout_seconds
                 start_time = time.time()
             else:
                 checksum_failures += 1
-                actual_checksum = checksum[0] if checksum and len(checksum) > 0 else None
-                print(f"CHECKSUM FAILURE #{checksum_failures}: got {actual_checksum}, expected {expected_checksum}")
-                print(f"  Packet: block_id={block_id}, cmd={cmd}, length={length}")
-                print(f"  Header hex: {header.hex()}")
-                print(f"  Payload start: {payload[:16].hex() if len(payload) >= 16 else payload.hex()}")
+                if checksum_failures <= 5:  # Only show first 5 failures to avoid spam
+                    actual_checksum = checksum[0] if checksum and len(checksum) > 0 else None
+                    print(f"Block {expected_block_id}: Checksum failure #{checksum_failures} - got {actual_checksum}, expected {expected_checksum}")
             
-    print(f"Reception complete for block {expected_block_id}:")
-    print(f"  Valid chunks: {chunk_count}")
-    print(f"  Checksum failures: {checksum_failures}")
-    print(f"  Incomplete reads: {incomplete_reads}")
-    print(f"  Wrong packets: {wrong_packets}")
-    print(f"  Total bytes: {len(file_data)}")
-    
     return file_data
 
 
@@ -195,6 +183,9 @@ def dump_all_blocks():
         for block_id in BLOCK_IDS:
             print(f"Requesting dump from block {block_id}...")
             
+            # Start timer
+            start_time = time.time()
+            
             # Send dump command
             pkt = build_dump_packet(block_id)
             ser.write(pkt)
@@ -203,7 +194,15 @@ def dump_all_blocks():
             # The block sends data first, then ACK
             file_data = read_dump_chunks(ser, block_id)
             
+            # End timer and calculate duration
+            end_time = time.time()
+            duration = end_time - start_time
+            
             if file_data:
+                # Calculate throughput
+                throughput = len(file_data) / duration / 1024  # KB/s
+                print(f"Block {block_id}: {len(file_data)} bytes in {duration:.2f}s ({throughput:.1f} KB/s)")
+                
                 # Save to file
                 filename = f"block_{block_id}_dump.bin"
                 try:
@@ -226,6 +225,7 @@ def dump_all_blocks():
                         "bytes_received": len(file_data)
                     })
             else:
+                print(f"Block {block_id}: No data received in {duration:.2f}s")
                 results.append({
                     "block_id": block_id,
                     "status": "no_data_received",
