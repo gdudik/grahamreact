@@ -91,6 +91,23 @@ def read_response(ser: serial.Serial, expected_block_id: int, return_cmd) -> byt
     return b''
 
 
+def read_exact_bytes(ser: serial.Serial, num_bytes: int, timeout_seconds: float = 1.0) -> bytes:
+    """Read exactly num_bytes from serial port, blocking until complete or timeout."""
+    data = b''
+    start_time = time.time()
+    
+    while len(data) < num_bytes and (time.time() - start_time) < timeout_seconds:
+        remaining = num_bytes - len(data)
+        chunk = ser.read(remaining)
+        if chunk:
+            data += chunk
+        else:
+            # Small delay to prevent busy waiting
+            time.sleep(0.001)
+    
+    return data
+
+
 def read_dump_chunks(ser: serial.Serial, expected_block_id: int, timeout_seconds: float = 5.0) -> bytes:
     """Read all chunks from a block's dump response and return the complete binary data."""
     file_data = b''
@@ -104,7 +121,8 @@ def read_dump_chunks(ser: serial.Serial, expected_block_id: int, timeout_seconds
     
     while time.time() - start_time < timeout_seconds:
         if ser.read(1) == bytes([STX]):
-            header = ser.read(3)
+            # Read header with blocking read
+            header = read_exact_bytes(ser, 3, 1.0)
             if not header or len(header) < 3:
                 incomplete_reads += 1
                 print(f"Incomplete header read (got {len(header)} bytes)")
@@ -122,36 +140,37 @@ def read_dump_chunks(ser: serial.Serial, expected_block_id: int, timeout_seconds
             if length == 0:
                 print(f"Received ACK packet from block {expected_block_id}")
                 # Read and verify checksum for the ACK packet
-                checksum = ser.read(1)
+                checksum = read_exact_bytes(ser, 1, 1.0)
                 full = bytes([STX]) + header
-                if checksum and checksum[0] == calc_checksum(full):
+                if checksum and len(checksum) == 1 and checksum[0] == calc_checksum(full):
                     print(f"ACK checksum valid - transmission complete")
                     break
                 else:
-                    print(f"ACK checksum invalid: got {checksum[0] if checksum else 'None'}, expected {calc_checksum(full)}")
+                    print(f"ACK checksum invalid: got {checksum[0] if checksum and len(checksum) > 0 else 'None'}, expected {calc_checksum(full)}")
                 continue
             
-            # Read the chunk payload
-            payload = ser.read(length)
+            # Read the chunk payload with blocking read
+            payload = read_exact_bytes(ser, length, 2.0)
             if not payload or len(payload) != length:
                 incomplete_reads += 1
                 print(f"Incomplete payload read: got {len(payload) if payload else 0} bytes, expected {length}")
                 continue
                 
-            # Read and verify checksum
-            checksum = ser.read(1)
+            # Read and verify checksum with blocking read
+            checksum = read_exact_bytes(ser, 1, 1.0)
             full = bytes([STX]) + header + payload
             expected_checksum = calc_checksum(full)
             
-            if checksum and checksum[0] == expected_checksum:
+            if checksum and len(checksum) == 1 and checksum[0] == expected_checksum:
                 chunk_count += 1
                 file_data += payload
-                print(f"Chunk {chunk_count}: {length} bytes received (total: {len(file_data)} bytes)")
+                if chunk_count % 50 == 0:  # Log every 50th chunk to reduce spam
+                    print(f"Chunk {chunk_count}: {length} bytes received (total: {len(file_data)} bytes)")
                 # Reset timeout for next chunk
                 start_time = time.time()
             else:
                 checksum_failures += 1
-                actual_checksum = checksum[0] if checksum else None
+                actual_checksum = checksum[0] if checksum and len(checksum) > 0 else None
                 print(f"CHECKSUM FAILURE #{checksum_failures}: got {actual_checksum}, expected {expected_checksum}")
                 print(f"  Packet: block_id={block_id}, cmd={cmd}, length={length}")
                 print(f"  Header hex: {header.hex()}")
