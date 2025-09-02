@@ -262,7 +262,7 @@ def arm():
                     "block_id": block_id,
                     "status": "no_response"
                 })
-
+    return {"results": results}
 
 
 @app.get('/set')
