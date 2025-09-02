@@ -183,7 +183,7 @@ def dump_all_blocks():
     return results
 
 
-@app.get('/ping')
+@app.post('/ping')
 def ping_all_blocks():
     abort_pin.off()
     results = []
@@ -242,7 +242,7 @@ def get_reports():
     return {"results": results}
 
 
-@app.get('/arm')
+@app.post('/arm')
 def arm():
     results = []
     abort_pin.off()
@@ -265,7 +265,7 @@ def arm():
     return {"results": results}
 
 
-@app.get('/set')
+@app.post('/set')
 def set():
     with serial.Serial(SERIAL_PORT, BAUD, timeout=0) as ser:
         pkt = build_set_packet()
@@ -291,6 +291,6 @@ def dump_blocks():
     }
 
 
-@app.get('/abort')
+@app.post('/abort')
 def abort_run():
     abort_pin.on()
