@@ -68,7 +68,7 @@ gun_fired = Pin(GUN_FIRED_PIN, Pin.OUT)
 
 ## ABORT PIN
 ## Abort the run early due to operator cancel
-ABORT_PIN = micropython.const(27)
+ABORT_PIN = micropython.const(28)
 run_aborted = Pin(ABORT_PIN, Pin.IN)
 # Push/pull driven by rpi controller. No pullup/pulldown necessary
 
