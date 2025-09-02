@@ -65,6 +65,11 @@ def build_send_report_packet(block_id: int) -> bytes:
     return header + bytes([calc_checksum(header)])
 
 
+def build_dump_packet(block_id: int) -> bytes:
+    header = bytes([STX, block_id, CMD_DUMP, 0])
+    return header + bytes([calc_checksum(header)])
+
+
 def read_response(ser: serial.Serial, expected_block_id: int, return_cmd) -> bytes:
     start = time.time()
     while time.time() - start < TIMEOUT:
@@ -81,6 +86,101 @@ def read_response(ser: serial.Serial, expected_block_id: int, return_cmd) -> byt
                 if block_id == expected_block_id and cmd == return_cmd:
                     return full + checksum
     return b''
+
+
+def read_dump_chunks(ser: serial.Serial, expected_block_id: int, timeout_seconds: float = 5.0) -> bytes:
+    """Read all chunks from a block's dump response and return the complete binary data."""
+    file_data = b''
+    start_time = time.time()
+    
+    while time.time() - start_time < timeout_seconds:
+        if ser.read(1) == bytes([STX]):
+            header = ser.read(3)
+            if not header or len(header) < 3:
+                continue
+            
+            block_id, cmd, length = header
+            
+            # Check if this is the expected block and command
+            if block_id != expected_block_id or cmd != CMD_DUMP:
+                continue
+                
+            # If length is 0, this is the ACK packet (end of transmission)
+            if length == 0:
+                # Read and verify checksum for the ACK packet
+                checksum = ser.read(1)
+                full = bytes([STX]) + header
+                if checksum and checksum[0] == calc_checksum(full):
+                    # ACK received, transmission complete
+                    break
+                continue
+            
+            # Read the chunk payload
+            payload = ser.read(length)
+            if not payload or len(payload) != length:
+                continue
+                
+            # Read and verify checksum
+            checksum = ser.read(1)
+            full = bytes([STX]) + header + payload
+            if checksum and checksum[0] == calc_checksum(full):
+                file_data += payload
+                # Reset timeout for next chunk
+                start_time = time.time()
+            
+    return file_data
+
+
+def dump_all_blocks():
+    """Send dump command to all blocks and save received files."""
+    abort_pin.off()
+    results = []
+    
+    with serial.Serial(SERIAL_PORT, BAUD, timeout=0) as ser:
+        for block_id in BLOCK_IDS:
+            print(f"Requesting dump from block {block_id}...")
+            
+            # Send dump command
+            pkt = build_dump_packet(block_id)
+            ser.write(pkt)
+            
+            # Start reading file chunks immediately (no ACK wait needed)
+            # The block sends data first, then ACK
+            file_data = read_dump_chunks(ser, block_id)
+            
+            if file_data:
+                # Save to file
+                filename = f"block_{block_id}_dump.bin"
+                try:
+                    with open(filename, "wb") as f:
+                        f.write(file_data)
+                    
+                    results.append({
+                        "block_id": block_id,
+                        "status": "success",
+                        "filename": filename,
+                        "bytes_received": len(file_data)
+                    })
+                    print(f"Saved {len(file_data)} bytes to {filename}")
+                    
+                except IOError as e:
+                    results.append({
+                        "block_id": block_id,
+                        "status": f"file_write_error: {str(e)}",
+                        "filename": filename,
+                        "bytes_received": len(file_data)
+                    })
+            else:
+                results.append({
+                    "block_id": block_id,
+                    "status": "no_data_received",
+                    "filename": None,
+                    "bytes_received": 0
+                })
+            
+            time.sleep(0.1)  # Small delay between blocks
+    
+    return results
 
 
 @app.get('/ping')
@@ -156,7 +256,26 @@ def set():
         pkt = build_set_packet()
         ser.write(pkt)
 
+@app.get('/dump')
+def dump_blocks():
+    """Dump binary files from all blocks and save to host machine."""
+    results = dump_all_blocks()
+    
+    # Calculate summary statistics
+    successful_dumps = [r for r in results if r["status"] == "success"]
+    total_bytes = sum(r["bytes_received"] for r in results)
+    
+    return {
+        "results": results,
+        "summary": {
+            "total_blocks": len(BLOCK_IDS),
+            "successful_dumps": len(successful_dumps),
+            "failed_dumps": len(results) - len(successful_dumps),
+            "total_bytes_received": total_bytes
+        }
+    }
+
+
 @app.get('/abort')
 def abort_run():
     abort_pin.on()
-
