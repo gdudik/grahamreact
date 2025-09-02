@@ -255,7 +255,7 @@ def arm():
                 if response:
                     results.append({
                         "block_id": block_id,
-                        "status": "ok",
+                        "status": "armed",
                     })
             else:
                 results.append({
