@@ -2,6 +2,9 @@ import serial
 import time
 from typing import Literal
 from gpiozero import OutputDevice
+from gpiozero import Device
+from gpiozero.pins.pigpio import PiGPIOFactory
+Device.pin_factory = PiGPIOFactory()
 from fastapi import FastAPI
 
 app = FastAPI()
