@@ -34,6 +34,7 @@ if BLOCK_ID > 10:
     raise ValueError(f'Illegal Block ID: {BLOCK_ID}')
 
 BROADCAST_ID = 0x99
+REPLY_FLAG = 0x80
 BAUD = 1000000
 
 TX_PIN = 0
@@ -81,7 +82,7 @@ def send(data: bytes):
 
 
 def send_ack(cmd_code: int):
-    packet = bytes([STX, BLOCK_ID, cmd_code, 0])  # No payload
+    packet = bytes([STX, BLOCK_ID, (cmd_code | REPLY_FLAG), 0])  # No payload, add 80 for command ack
     packet += bytes([calc_checksum(packet)])
     send(packet)
 
