@@ -24,11 +24,21 @@ BROADCAST_ID = 0x99
 abort_pin = OutputDevice(17)
 abort_pin.off()
 
+rts_pin = OutputDevice(18)
+rts_pin.off()
+
 BLOCK_IDS = range(1, 11)  # block IDs 1 through 10
-SERIAL_PORT = '/dev/ttyUSB0'  # Adjust if using onboard UART
+SERIAL_PORT = '/dev/ttyAMA0'  # Adjust if using onboard UART
 BAUD = 1000000
 TIMEOUT = 0.2  # seconds
 
+def ser_write(ser: serial.Serial, packet: bytes):
+    rts_pin.on()
+    time.sleep(0.001)
+    ser.write(packet)
+    ser.flush()
+    time.sleep(0.001)
+    rts_pin.off()
 
 def calc_checksum(data: bytes) -> int:
     return sum(data) % 256
@@ -188,7 +198,7 @@ def dump_all_blocks():
             
             # Send dump command
             pkt = build_dump_packet(block_id)
-            ser.write(pkt)
+            ser_write(ser, pkt)
             
             # Start reading file chunks immediately (no ACK wait needed)
             # The block sends data first, then ACK
@@ -246,7 +256,7 @@ def ping_all_blocks():
     with serial.Serial(SERIAL_PORT, BAUD, timeout=0) as ser:
         for block_id in BLOCK_IDS:
             pkt = build_ping_packet(block_id)
-            ser.write(pkt)
+            ser_write(ser, pkt)
 
             response = read_response(ser, block_id, CMD_PING)
             if response:
@@ -272,7 +282,7 @@ def get_reports():
     with serial.Serial(SERIAL_PORT, BAUD, timeout=0) as ser:
         for block_id in BLOCK_IDS:
             pkt = build_send_report_packet(block_id)
-            ser.write(pkt)
+            ser_write(ser, pkt)
 
             response = read_response(ser, block_id, CMD_SEND_RT_REPORT)
             # response format [STX, BLOCK_ID, CMD_SEND_RT_REPORT, 0x43, 0x41, len(payload)]) + payload
@@ -304,7 +314,7 @@ def arm():
     for block_id in BLOCK_IDS:
         with serial.Serial(SERIAL_PORT, BAUD, timeout=0) as ser:
             pkt = build_arm_packet()
-            ser.write(pkt)
+            ser_write(ser,pkt)
             response = read_response(ser, block_id, CMD_ARM)
             if response:
                 if response:
@@ -324,7 +334,7 @@ def arm():
 def set():
     with serial.Serial(SERIAL_PORT, BAUD, timeout=0) as ser:
         pkt = build_set_packet()
-        ser.write(pkt)
+        ser_write(ser, pkt)
 
 @app.get('/dump')
 def dump_blocks():
