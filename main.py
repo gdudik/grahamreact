@@ -9,6 +9,11 @@ from fastapi import FastAPI
 
 app = FastAPI()
 
+def debug_packet(packet: bytes, label: str):
+    """Debug helper to print packet contents in hex format."""
+    hex_str = ' '.join(f'{b:02X}' for b in packet)
+    print(f"[DEBUG] {label}: {hex_str} (len={len(packet)})")
+
 # --- COMMAND CODES ---
 STX = 0xAA
 CMD_PING = 0x01
@@ -87,20 +92,58 @@ def build_dump_packet(block_id: int) -> bytes:
 
 
 def read_response(ser: serial.Serial, expected_block_id: int, return_cmd) -> bytes:
+    expected_reply_cmd = reply_cmd(return_cmd)
+    print(f"[DEBUG] Waiting for response: block_id={expected_block_id}, expected_cmd=0x{expected_reply_cmd:02X}")
+    
     start = time.time()
+    packet_count = 0
+    
     while time.time() - start < TIMEOUT:
         if ser.read(1) == bytes([STX]):
+            packet_count += 1
+            print(f"[DEBUG] Found STX, reading packet #{packet_count}")
+            
             header = ser.read(3)
             if not header or len(header) < 3:
+                print(f"[DEBUG] Incomplete header: got {len(header) if header else 0} bytes")
                 continue
+                
             block_id, cmd, length = header
+            print(f"[DEBUG] Header: block_id={block_id}, cmd=0x{cmd:02X}, length={length}")
+            
             payload = ser.read(length) if length > 0 else b''
             checksum = ser.read(1)
+            
+            if not checksum:
+                print(f"[DEBUG] No checksum received")
+                continue
 
             full = bytes([STX]) + header + payload
-            if checksum and checksum[0] == calc_checksum(full):
-                if block_id == expected_block_id and cmd == reply_cmd(return_cmd):
-                    return full + checksum
+            expected_checksum = calc_checksum(full)
+            actual_checksum = checksum[0]
+            
+            print(f"[DEBUG] Checksum: expected=0x{expected_checksum:02X}, actual=0x{actual_checksum:02X}")
+            
+            if actual_checksum != expected_checksum:
+                print(f"[DEBUG] CHECKSUM MISMATCH!")
+                debug_packet(full + checksum, "BAD CHECKSUM PACKET")
+                continue
+                
+            print(f"[DEBUG] Checksum OK")
+            
+            if block_id != expected_block_id:
+                print(f"[DEBUG] Wrong block ID: got {block_id}, expected {expected_block_id}")
+                continue
+                
+            if cmd != expected_reply_cmd:
+                print(f"[DEBUG] Wrong command: got 0x{cmd:02X}, expected 0x{expected_reply_cmd:02X}")
+                continue
+                
+            print(f"[DEBUG] MATCH! Returning response")
+            debug_packet(full + checksum, "ACCEPTED RESPONSE")
+            return full + checksum
+            
+    print(f"[DEBUG] Timeout after {TIMEOUT}s, received {packet_count} packets")
     return b''
 
 
@@ -260,16 +303,20 @@ def ping_all_blocks():
 
     with serial.Serial(SERIAL_PORT, BAUD, timeout=0) as ser:
         for block_id in BLOCK_IDS:
+            print(f"\n[DEBUG] === PINGING BLOCK {block_id} ===")
             pkt = build_ping_packet(block_id)
+            debug_packet(pkt, f"SENDING to block {block_id}")
             ser_write(ser, pkt)
 
             response = read_response(ser, block_id, CMD_PING)
             if response:
+                debug_packet(response, f"RECEIVED from block {block_id}")
                 results.append({
                     "block_id": block_id,
                     "status": "ok",
                 })
             else:
+                print(f"[DEBUG] No response received from block {block_id}")
                 results.append({
                     "block_id": block_id,
                     "status": "no_response"
