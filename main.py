@@ -19,8 +19,6 @@ CMD_SET_SENSOR = 0x05
 CMD_SET_GENDER = 0x06
 CMD_SEND_RT_REPORT = 0x07
 
-REPLY_FLAG = 0x80
-
 BROADCAST_ID = 0x99
 
 abort_pin = OutputDevice(17)
@@ -28,25 +26,19 @@ abort_pin.off()
 
 rts_pin = OutputDevice(18)
 rts_pin.off()
-_tx_end_at = 0.0
 
 BLOCK_IDS = range(1, 11)  # block IDs 1 through 10
 SERIAL_PORT = '/dev/ttyAMA0'  # Adjust if using onboard UART
 BAUD = 1000000
 TIMEOUT = 0.2  # seconds
 
-incomplete_reads = 0
-wrong_packets = 0
-
 def ser_write(ser: serial.Serial, packet: bytes):
-    global _tx_end_at
-    ser.reset_input_buffer()
-    rts_pin.on()              
+    rts_pin.on()
+    time.sleep(0.001)
     ser.write(packet)
     ser.flush()
+    time.sleep(0.001)
     rts_pin.off()
-    _tx_end_at = time.monotonic()             
-    ser.reset_input_buffer()
 
 def calc_checksum(data: bytes) -> int:
     return sum(data) % 256
@@ -94,8 +86,6 @@ def build_dump_packet(block_id: int) -> bytes:
 def read_response(ser: serial.Serial, expected_block_id: int, return_cmd) -> bytes:
     start = time.time()
     while time.time() - start < TIMEOUT:
-        if rts_pin.is_active or time.monotonic() - _tx_end_at < 0.0002:
-            continue
         if ser.read(1) == bytes([STX]):
             header = ser.read(3)
             if not header or len(header) < 3:
@@ -106,7 +96,7 @@ def read_response(ser: serial.Serial, expected_block_id: int, return_cmd) -> byt
 
             full = bytes([STX]) + header + payload
             if checksum and checksum[0] == calc_checksum(full):
-                if block_id == expected_block_id and cmd == (return_cmd | REPLY_FLAG):
+                if block_id == expected_block_id and cmd == return_cmd:
                     return full + checksum
     return b''
 
@@ -147,7 +137,7 @@ def read_dump_chunks(ser: serial.Serial, expected_block_id: int, timeout_seconds
             block_id, cmd, length = header
             
             # Check if this is the expected block and command
-            if block_id != expected_block_id or cmd != (CMD_DUMP | 0x80):
+            if block_id != expected_block_id or cmd != CMD_DUMP:
                 wrong_packets += 1
                 print(f"Wrong packet: block_id={block_id} (expected {expected_block_id}), cmd={cmd} (expected {CMD_DUMP})")
                 continue
@@ -199,7 +189,7 @@ def dump_all_blocks():
     abort_pin.off()
     results = []
     
-    with serial.Serial(SERIAL_PORT, BAUD, timeout=0.01) as ser:
+    with serial.Serial(SERIAL_PORT, BAUD, timeout=0) as ser:
         for block_id in BLOCK_IDS:
             print(f"Requesting dump from block {block_id}...")
             
@@ -263,7 +253,7 @@ def ping_all_blocks():
     abort_pin.off()
     results = []
 
-    with serial.Serial(SERIAL_PORT, BAUD, timeout=0.01) as ser:
+    with serial.Serial(SERIAL_PORT, BAUD, timeout=0) as ser:
         for block_id in BLOCK_IDS:
             pkt = build_ping_packet(block_id)
             ser_write(ser, pkt)
@@ -289,7 +279,7 @@ def ping_all_blocks():
 def get_reports():
     results = []
 
-    with serial.Serial(SERIAL_PORT, BAUD, timeout=0.01) as ser:
+    with serial.Serial(SERIAL_PORT, BAUD, timeout=0) as ser:
         for block_id in BLOCK_IDS:
             pkt = build_send_report_packet(block_id)
             ser_write(ser, pkt)
@@ -322,7 +312,7 @@ def arm():
     results = []
     abort_pin.off()
     for block_id in BLOCK_IDS:
-        with serial.Serial(SERIAL_PORT, BAUD, timeout=0.01) as ser:
+        with serial.Serial(SERIAL_PORT, BAUD, timeout=0) as ser:
             pkt = build_arm_packet()
             ser_write(ser,pkt)
             response = read_response(ser, block_id, CMD_ARM)
@@ -342,7 +332,7 @@ def arm():
 
 @app.post('/set')
 def set():
-    with serial.Serial(SERIAL_PORT, BAUD, timeout=0.01) as ser:
+    with serial.Serial(SERIAL_PORT, BAUD, timeout=0) as ser:
         pkt = build_set_packet()
         ser_write(ser, pkt)
 
