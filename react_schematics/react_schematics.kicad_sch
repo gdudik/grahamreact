@@ -3403,8 +3403,12 @@
 		(uuid "f69e092d-2083-4b45-aa2c-217fa8bd1fba")
 	)
 	(no_connect
-		(at 99.06 76.2)
-		(uuid "103beb10-a244-4fc1-b3c6-f01d8e31d9be")
+		(at 53.34 58.42)
+		(uuid "020aefab-6753-4b2f-9b20-08e5d4adebf4")
+	)
+	(no_connect
+		(at 53.34 81.28)
+		(uuid "1ae1ac28-5885-4c52-ae64-bb3a8ba097f6")
 	)
 	(no_connect
 		(at 180.34 118.11)
@@ -3415,8 +3419,20 @@
 		(uuid "389ae9ec-356e-4057-961f-de8a28790777")
 	)
 	(no_connect
+		(at 53.34 38.1)
+		(uuid "48649b4a-9a14-416c-aa4e-997584182115")
+	)
+	(no_connect
 		(at 99.06 68.58)
 		(uuid "4c1d186b-387f-45b3-8ae4-380dfec42183")
+	)
+	(no_connect
+		(at 53.34 53.34)
+		(uuid "4f0efc90-5769-45d8-91b9-bdca3dd46d83")
+	)
+	(no_connect
+		(at 53.34 40.64)
+		(uuid "5880ae56-1d7b-40d4-956d-802017303e5a")
 	)
 	(no_connect
 		(at 53.34 73.66)
@@ -3425,10 +3441,6 @@
 	(no_connect
 		(at 166.37 151.13)
 		(uuid "62a4cb98-97dc-4ccc-9a60-b16da6c4a6fd")
-	)
-	(no_connect
-		(at 53.34 80.01)
-		(uuid "66c9f7ac-fded-4640-bec4-1b9a435f2bcd")
 	)
 	(no_connect
 		(at 205.74 125.73)
@@ -3441,6 +3453,10 @@
 	(no_connect
 		(at 180.34 120.65)
 		(uuid "808e9b7a-81b3-4f5c-9e10-7162f11efece")
+	)
+	(no_connect
+		(at 53.34 55.88)
+		(uuid "8e9a8f5d-84e3-431e-95d5-c867358baeec")
 	)
 	(no_connect
 		(at 166.37 153.67)
@@ -3457,10 +3473,6 @@
 	(no_connect
 		(at 71.12 22.86)
 		(uuid "aff3c4ff-f7af-4654-9e20-4330dd149ad8")
-	)
-	(no_connect
-		(at 99.06 73.66)
-		(uuid "b146313d-3057-4786-a8ce-06ec52a33dcb")
 	)
 	(no_connect
 		(at 99.06 60.96)
@@ -3550,6 +3562,16 @@
 	)
 	(wire
 		(pts
+			(xy 217.17 63.5) (xy 232.41 63.5)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2a13de02-ce1f-42a9-83e5-9ea3f1b1b739")
+	)
+	(wire
+		(pts
 			(xy 41.91 63.5) (xy 53.34 63.5)
 		)
 		(stroke
@@ -3577,6 +3599,16 @@
 			(type default)
 		)
 		(uuid "2c531e47-207a-45c5-a8d3-217b815e4593")
+	)
+	(wire
+		(pts
+			(xy 99.06 76.2) (xy 101.6 76.2)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2ed9d1a4-e88c-4a8c-bbb5-b4bdf439f827")
 	)
 	(wire
 		(pts
@@ -3667,6 +3699,16 @@
 			(type default)
 		)
 		(uuid "5b3c1623-7afe-445a-91a4-7b26dbdcd0f5")
+	)
+	(wire
+		(pts
+			(xy 99.06 73.66) (xy 101.6 73.66)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "5df1760d-ab30-44b9-aee6-58d0e2c21de9")
 	)
 	(wire
 		(pts
@@ -3840,6 +3882,16 @@
 	)
 	(wire
 		(pts
+			(xy 217.17 60.96) (xy 232.41 60.96)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b66cb05d-edd6-4d7c-8e46-011f8f1091d5")
+	)
+	(wire
+		(pts
 			(xy 45.72 102.87) (xy 45.72 106.68)
 		)
 		(stroke
@@ -3890,7 +3942,7 @@
 	)
 	(wire
 		(pts
-			(xy 220.98 53.34) (xy 232.41 53.34)
+			(xy 217.17 58.42) (xy 232.41 58.42)
 		)
 		(stroke
 			(width 0)
@@ -3960,7 +4012,7 @@
 	)
 	(wire
 		(pts
-			(xy 220.98 48.26) (xy 232.41 48.26)
+			(xy 218.44 48.26) (xy 232.41 48.26)
 		)
 		(stroke
 			(width 0)
@@ -3970,7 +4022,7 @@
 	)
 	(wire
 		(pts
-			(xy 220.98 45.72) (xy 232.41 45.72)
+			(xy 218.44 45.72) (xy 232.41 45.72)
 		)
 		(stroke
 			(width 0)
@@ -3980,7 +4032,7 @@
 	)
 	(wire
 		(pts
-			(xy 220.98 55.88) (xy 232.41 55.88)
+			(xy 218.44 53.34) (xy 232.41 53.34)
 		)
 		(stroke
 			(width 0)
@@ -3990,7 +4042,7 @@
 	)
 	(wire
 		(pts
-			(xy 220.98 50.8) (xy 232.41 50.8)
+			(xy 218.44 50.8) (xy 232.41 50.8)
 		)
 		(stroke
 			(width 0)
@@ -4028,6 +4080,26 @@
 		)
 		(uuid "014f1fca-fac1-494e-83a9-604a1703d854")
 	)
+	(label "ABORT_SIG_OUT"
+		(at 217.17 60.96 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "062231cd-a6cf-47c7-b1f0-67ae1aeebe9d")
+	)
+	(label "TERM_SIG"
+		(at 101.6 73.66 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "077b3c1e-22bd-486d-8dae-9a98b76c63a7")
+	)
 	(label "BCD_FOURS"
 		(at 41.91 63.5 0)
 		(effects
@@ -4039,7 +4111,7 @@
 		(uuid "0c7b74f4-9b33-420c-ba09-03cc2437002a")
 	)
 	(label "GUN_SENSE"
-		(at 220.98 50.8 0)
+		(at 218.44 50.8 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -4069,7 +4141,7 @@
 		(uuid "1f43ac04-c695-4b4f-b4a3-6ee5a2e94973")
 	)
 	(label "RS485_B"
-		(at 220.98 48.26 0)
+		(at 218.44 48.26 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -4098,7 +4170,7 @@
 		)
 		(uuid "4098c97a-50fa-459e-a1a3-1d77cc694051")
 	)
-	(label "RS485_RX"
+	(label "RS485_RTS"
 		(at 58.42 127 0)
 		(effects
 			(font
@@ -4106,7 +4178,7 @@
 			)
 			(justify left bottom)
 		)
-		(uuid "413ba4cd-5c9c-4f4d-903a-d5087874a138")
+		(uuid "493d6578-889e-4f15-8f0c-ac3607db2fe4")
 	)
 	(label "RS485_RX"
 		(at 55.88 121.92 0)
@@ -4137,6 +4209,16 @@
 			(justify left bottom)
 		)
 		(uuid "511ddecb-15d7-4a4a-9d09-94dcf2dcf6d0")
+	)
+	(label "ABORT_SIG_OUT"
+		(at 101.6 76.2 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "53e31236-09c5-4339-ac20-8928d8b9c919")
 	)
 	(label "BCD_TWOS"
 		(at 41.91 66.04 0)
@@ -4179,7 +4261,7 @@
 		(uuid "77cf61ec-55c5-48f0-b528-e44abe175e6f")
 	)
 	(label "RS485_A"
-		(at 220.98 45.72 0)
+		(at 218.44 45.72 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -4218,6 +4300,16 @@
 		)
 		(uuid "9db3e387-a6fd-464e-a9b2-c408cc5a5339")
 	)
+	(label "TERM_SIG"
+		(at 217.17 63.5 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "a9996a34-80a4-4bc5-9482-f9170f4049f0")
+	)
 	(label "BCD_FOURS"
 		(at 35.56 163.83 0)
 		(effects
@@ -4238,7 +4330,7 @@
 		)
 		(uuid "ac2edd19-482a-400b-ba4b-234e8045d38c")
 	)
-	(label "ABORT_SIG"
+	(label "ABORT_SIG_IN"
 		(at 101.6 78.74 0)
 		(effects
 			(font
@@ -4258,8 +4350,8 @@
 		)
 		(uuid "c8363667-d3ff-446e-a805-9e1e8a03a701")
 	)
-	(label "ABORT_SIG"
-		(at 220.98 53.34 0)
+	(label "ABORT_SIG_IN"
+		(at 217.17 58.42 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -4279,7 +4371,7 @@
 		(uuid "ec22f46b-d7fb-49d3-9cb9-df7124909883")
 	)
 	(label "FS_ALERT"
-		(at 220.98 55.88 0)
+		(at 218.44 53.34 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -7020,6 +7112,48 @@
 		)
 	)
 	(sheet
+		(at 232.41 109.22)
+		(size 33.02 36.83)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "80a6ffa3-fe18-4c1e-936e-d9e998147b89")
+		(property "Sheetname" "Host Console"
+			(at 232.41 108.5084 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "host_console.kicad_sch"
+			(at 232.41 146.6346 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "react_schematics"
+				(path "/097a7a0e-941c-41ac-8d8a-2cc7e0c1dbea"
+					(page "3")
+				)
+			)
+		)
+	)
+	(sheet
 		(at 232.41 40.64)
 		(size 46.99 40.64)
 		(exclude_from_sim no)
@@ -7093,9 +7227,9 @@
 				(justify left)
 			)
 		)
-		(pin "ABORT_SIG" bidirectional
+		(pin "FS_ALERT" bidirectional
 			(at 232.41 53.34 180)
-			(uuid "bd44863e-8e35-415b-801b-23c32b2d47c0")
+			(uuid "d57fad97-0f88-4cdc-b700-83882842096a")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7103,9 +7237,29 @@
 				(justify left)
 			)
 		)
-		(pin "FS_ALERT" bidirectional
-			(at 232.41 55.88 180)
-			(uuid "d57fad97-0f88-4cdc-b700-83882842096a")
+		(pin "ABORT_SIG_IN" output
+			(at 232.41 58.42 180)
+			(uuid "5e72f836-4303-451d-a8ab-b3746f7e545e")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "ABORT_SIG_OUT" output
+			(at 232.41 60.96 180)
+			(uuid "9ccb046c-449a-4557-956c-2b698fa305f6")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "TERM_SIG" output
+			(at 232.41 63.5 180)
+			(uuid "a5e493e7-7f0f-469c-8876-2fd8a4b42dd1")
 			(effects
 				(font
 					(size 1.27 1.27)

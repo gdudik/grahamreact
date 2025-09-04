@@ -2004,12 +2004,6 @@
 		(uuid "1aefaf94-e289-4efe-acfd-6e55aee294f7")
 	)
 	(junction
-		(at 76.2 67.31)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "1b8ce6b4-387a-4a9d-9009-6543ffe91b27")
-	)
-	(junction
 		(at 243.84 31.75)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -2159,16 +2153,6 @@
 	)
 	(wire
 		(pts
-			(xy 48.26 49.53) (xy 48.26 67.31)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "0fa22ab2-b856-4b11-b63c-dae1e6c8cefb")
-	)
-	(wire
-		(pts
 			(xy 58.42 55.88) (xy 76.2 55.88)
 		)
 		(stroke
@@ -2239,6 +2223,26 @@
 	)
 	(wire
 		(pts
+			(xy 48.26 96.52) (xy 48.26 49.53)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2af0326c-21e2-42b8-8ccf-9c74dca57fd8")
+	)
+	(wire
+		(pts
+			(xy 36.83 96.52) (xy 48.26 96.52)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2b8e10c0-4370-4844-8b5a-dc3d5b471c27")
+	)
+	(wire
+		(pts
 			(xy 76.2 72.39) (xy 106.68 72.39)
 		)
 		(stroke
@@ -2246,6 +2250,16 @@
 			(type default)
 		)
 		(uuid "2e80c13f-53d2-496e-9742-5e862cb7e167")
+	)
+	(wire
+		(pts
+			(xy 52.07 143.51) (xy 69.85 143.51)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2fd7ebcb-5adb-442b-a73b-e583124469a7")
 	)
 	(wire
 		(pts
@@ -2269,16 +2283,6 @@
 	)
 	(wire
 		(pts
-			(xy 76.2 67.31) (xy 104.14 67.31)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "38cb8f3d-9ca2-4635-91a1-3ccf22656f9c")
-	)
-	(wire
-		(pts
 			(xy 76.2 77.47) (xy 90.17 77.47)
 		)
 		(stroke
@@ -2286,6 +2290,16 @@
 			(type default)
 		)
 		(uuid "3fdda65a-c12c-43a4-80de-d3b8abd6d7ff")
+	)
+	(wire
+		(pts
+			(xy 114.3 96.52) (xy 104.14 96.52)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "44186886-d030-4aa2-8e67-3274257cfeab")
 	)
 	(wire
 		(pts
@@ -2306,16 +2320,6 @@
 			(type default)
 		)
 		(uuid "4991791f-b30f-46b8-bcff-d078b6bcfde3")
-	)
-	(wire
-		(pts
-			(xy 48.26 67.31) (xy 76.2 67.31)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "528473f6-2165-4c90-a915-776f42f82cc6")
 	)
 	(wire
 		(pts
@@ -2479,6 +2483,16 @@
 	)
 	(wire
 		(pts
+			(xy 104.14 96.52) (xy 104.14 49.53)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "8c5ed59f-6e36-4344-9706-21dddd6e05f5")
+	)
+	(wire
+		(pts
 			(xy 76.2 55.88) (xy 93.98 55.88)
 		)
 		(stroke
@@ -2579,26 +2593,6 @@
 	)
 	(wire
 		(pts
-			(xy 104.14 67.31) (xy 104.14 49.53)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "bb940ca2-d0ea-4c6e-b7ea-f115ac86e940")
-	)
-	(wire
-		(pts
-			(xy 76.2 67.31) (xy 76.2 69.85)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "bd785c87-225d-4536-9909-0134a6f79001")
-	)
-	(wire
-		(pts
 			(xy 106.68 72.39) (xy 106.68 49.53)
 		)
 		(stroke
@@ -2679,16 +2673,6 @@
 	)
 	(wire
 		(pts
-			(xy 76.2 69.85) (xy 77.47 69.85)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "d83182ff-bd8f-426b-9c53-e6b4af1bcab2")
-	)
-	(wire
-		(pts
 			(xy 76.2 64.77) (xy 77.47 64.77)
 		)
 		(stroke
@@ -2753,7 +2737,7 @@
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify bottom)
 		)
 		(uuid "5cf0e4d8-eead-4ace-90fb-202db89a6471")
 	)
@@ -2783,9 +2767,31 @@
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify bottom)
 		)
 		(uuid "f51fdb89-1f9e-4ae4-b1a1-ba9e8de83564")
+	)
+	(hierarchical_label "ABORT_SIG_IN"
+		(shape output)
+		(at 36.83 96.52 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "2eae551c-3669-4139-88a9-8f330beb15a0")
+	)
+	(hierarchical_label "ABORT_SIG_OUT"
+		(shape output)
+		(at 114.3 96.52 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "2eae551c-3669-4139-88a9-8f330beb15a0")
 	)
 	(hierarchical_label "5V_PPWR"
 		(shape output)
@@ -2798,20 +2804,20 @@
 		)
 		(uuid "548cc7d9-ecc0-4e1e-93f8-49e0d147d60b")
 	)
-	(hierarchical_label "FS_ALERT"
-		(shape bidirectional)
-		(at 77.47 64.77 0)
+	(hierarchical_label "TERM_SIG"
+		(shape output)
+		(at 52.07 143.51 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left)
+			(justify right)
 		)
-		(uuid "f2b666ad-0882-4d6f-8a2f-7c709cbdf9a2")
+		(uuid "aa5c1257-149b-41a2-a342-acea647e8be7")
 	)
-	(hierarchical_label "ABORT_SIG"
+	(hierarchical_label "FS_ALERT"
 		(shape bidirectional)
-		(at 77.47 69.85 0)
+		(at 77.47 64.77 0)
 		(effects
 			(font
 				(size 1.27 1.27)

@@ -416,6 +416,10 @@
     [
       "e2bb0823-2868-455d-8431-1989867c3132",
       "Power and Connectors"
+    ],
+    [
+      "80a6ffa3-fe18-4c1e-936e-d9e998147b89",
+      "Host Console"
     ]
   ],
   "text_variables": {}
