@@ -34,8 +34,8 @@ if BLOCK_ID > 10:
     raise ValueError(f'Illegal Block ID: {BLOCK_ID}')
 
 BROADCAST_ID = 0x99
-REPLY_FLAG = 0x80
 BAUD = 1000000
+REPLY_FLAG = 0x40
 
 TX_PIN = 0
 RX_PIN = 1
@@ -67,6 +67,8 @@ gun_timestamp = None
 rt_timestamp = None
 
 # --- Low-Level Functions ---
+def reply_cmd(cmd):
+    return (cmd | REPLY_FLAG)
 
 
 def calc_checksum(data: bytes) -> int:
@@ -82,7 +84,7 @@ def send(data: bytes):
 
 
 def send_ack(cmd_code: int):
-    packet = bytes([STX, BLOCK_ID, (cmd_code | REPLY_FLAG), 0])  # No payload, add 80 for command ack
+    packet = bytes([STX, BLOCK_ID, reply_cmd(cmd_code), 0])  # No payload
     packet += bytes([calc_checksum(packet)])
     send(packet)
 
@@ -107,7 +109,7 @@ def read_packet(timeout_ms=100):
 
 
 def handle_ping(is_broadcast: bool):
-    print("PING received")
+    debug_log("PING received")
     if not is_broadcast:
         send_ack(CMD_PING)
 
@@ -170,18 +172,18 @@ def handle_send_rt_report():
         b = calculated_reaction.to_bytes(3, 'big')
         # CA (calc) + calculated reaction time
         packet = bytes(
-            [STX, BLOCK_ID, CMD_SEND_RT_REPORT, 0x43, 0x41, len(b)]) + b
+            [STX, BLOCK_ID, reply_cmd(CMD_SEND_RT_REPORT), 0x43, 0x41, len(b)]) + b
         packet += bytes([calc_checksum(packet)])
     elif rt_timestamp is not None and gun_timestamp is None:
-        packet = bytes([STX, BLOCK_ID, CMD_SEND_RT_REPORT,
+        packet = bytes([STX, BLOCK_ID, reply_cmd(CMD_SEND_RT_REPORT),
                        0x4E, 0x47])  # NG--no gun
         packet += bytes([calc_checksum(packet)])
     elif rt_timestamp is None and gun_timestamp is not None:
-        packet = bytes([STX, BLOCK_ID, CMD_SEND_RT_REPORT,
+        packet = bytes([STX, BLOCK_ID, reply_cmd(CMD_SEND_RT_REPORT),
                        0x4E, 0x52])  # NR--no reaction
         packet += bytes([calc_checksum(packet)])
     elif rt_timestamp is None and gun_timestamp is None:
-        packet = bytes([STX, BLOCK_ID, CMD_SEND_RT_REPORT,
+        packet = bytes([STX, BLOCK_ID, reply_cmd(CMD_SEND_RT_REPORT),
                        0x4E, 0x44])  # ND--no data
         packet += bytes([calc_checksum(packet)])
     send(packet)

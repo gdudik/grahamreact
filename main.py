@@ -20,6 +20,7 @@ CMD_SET_GENDER = 0x06
 CMD_SEND_RT_REPORT = 0x07
 
 BROADCAST_ID = 0x99
+REPLY_FLAG = 0x40
 
 abort_pin = OutputDevice(17)
 abort_pin.off()
@@ -43,6 +44,8 @@ def ser_write(ser: serial.Serial, packet: bytes):
 def calc_checksum(data: bytes) -> int:
     return sum(data) % 256
 
+def reply_cmd(cmd):
+    return (cmd | REPLY_FLAG)
 
 def build_ping_packet(block_id: int) -> bytes:
     header = bytes([STX, block_id, CMD_PING, 0])  # 0-length payload
@@ -96,7 +99,7 @@ def read_response(ser: serial.Serial, expected_block_id: int, return_cmd) -> byt
 
             full = bytes([STX]) + header + payload
             if checksum and checksum[0] == calc_checksum(full):
-                if block_id == expected_block_id and cmd == return_cmd:
+                if block_id == expected_block_id and cmd == reply_cmd(return_cmd):
                     return full + checksum
     return b''
 
@@ -124,6 +127,8 @@ def read_dump_chunks(ser: serial.Serial, expected_block_id: int, timeout_seconds
     start_time = time.time()
     chunk_count = 0
     checksum_failures = 0
+    incomplete_reads = 0
+    wrong_packets = 0
     
     while time.time() - start_time < timeout_seconds:
         if ser.read(1) == bytes([STX]):
@@ -137,7 +142,7 @@ def read_dump_chunks(ser: serial.Serial, expected_block_id: int, timeout_seconds
             block_id, cmd, length = header
             
             # Check if this is the expected block and command
-            if block_id != expected_block_id or cmd != CMD_DUMP:
+            if block_id != expected_block_id or cmd != reply_cmd(CMD_DUMP):
                 wrong_packets += 1
                 print(f"Wrong packet: block_id={block_id} (expected {expected_block_id}), cmd={cmd} (expected {CMD_DUMP})")
                 continue
