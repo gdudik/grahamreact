@@ -63,8 +63,11 @@ gun_triggered = False
 ALERT_PIN = micropython.const(15)
 fs_alert = Pin(ALERT_PIN, Pin.OUT, Pin.PULL_DOWN)
 
-GUN_FIRED_PIN = micropython.const(12)
+GUN_FIRED_PIN = micropython.const(20)
 gun_fired = Pin(GUN_FIRED_PIN, Pin.OUT)
+
+LOGGING_PIN = micropython.const(21)
+logger_running = Pin(LOGGING_PIN, Pin.OUT)
 
 ## ABORT PIN
 ## Abort the run early due to operator cancel
@@ -257,6 +260,7 @@ def make_timestamp_packet(type, ts):
 def start_loop():
     print('starting loop')
     global wp, fifo_ready, gun_triggered, gun_timestamp, int_counter, ts_rollovers, runner_started_ts
+    logger_running.value(1)
     imu.write_reg(0x4E, 0b00000011)
     start = time.ticks_ms()
     while time.ticks_diff(time.ticks_ms(), start) < (DURATION_S * 1000):
@@ -299,7 +303,7 @@ def start_loop():
     
 
     gc.collect()
-
+    logger_running.value(0)
     if gun_timestamp or reaction_time_timestamp:
         return gun_timestamp, reaction_time_timestamp
 

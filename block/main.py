@@ -41,7 +41,7 @@ TX_PIN = 0
 RX_PIN = 1
 DIR_PIN = 2
 
-BOOT_LIGHT = Pin(25, Pin.OUT)
+BOOT_LIGHT = Pin(3, Pin.OUT)
 BOOT_LIGHT.value(1)
 
 # --- COMMAND CODES ---
