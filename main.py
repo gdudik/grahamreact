@@ -35,7 +35,7 @@ rts_pin.off()
 
 BLOCK_IDS = range(1, 11)  # block IDs 1 through 10
 SERIAL_PORT = '/dev/ttyAMA0'  
-BAUD = 1000000
+BAUD = 1500000
 TIMEOUT = 0.2  # seconds
 
 def ser_write(ser: serial.Serial, packet: bytes):
@@ -173,7 +173,7 @@ def read_exact_bytes(ser: serial.Serial, num_bytes: int, timeout_seconds: float 
     return data
 
 
-def read_dump_chunks(ser: serial.Serial, expected_block_id: int, timeout_seconds: float = 5.0) -> bytes:
+def read_dump_chunks(ser: serial.Serial, expected_block_id: int, timeout_seconds: float = 3.0) -> bytes:
     """Read all chunks from a block's dump response and return the complete binary data."""
     file_data = b''
     start_time = time.time()
