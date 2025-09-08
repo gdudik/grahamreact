@@ -34,7 +34,7 @@ rts_pin = OutputDevice(18)
 rts_pin.off()
 
 BLOCK_IDS = range(1, 11)  # block IDs 1 through 10
-SERIAL_PORT = '/dev/ttyAMA0'  # Adjust if using onboard UART
+SERIAL_PORT = '/dev/ttyAMA0'  
 BAUD = 1000000
 TIMEOUT = 0.2  # seconds
 
@@ -95,55 +95,64 @@ def read_response(ser: serial.Serial, expected_block_id: int, return_cmd) -> byt
     expected_reply_cmd = reply_cmd(return_cmd)
     print(f"[DEBUG] Waiting for response: block_id={expected_block_id}, expected_cmd=0x{expected_reply_cmd:02X}")
     
-    start = time.time()
-    packet_count = 0
+    # Collect all bytes during the timeout period to handle timing variations
+    raw_bytes_received = []
+    start_time = time.time()
+    while time.time() - start_time < TIMEOUT:
+        byte_data = ser.read(1)
+        if byte_data:
+            raw_bytes_received.append(byte_data[0])
     
-    while time.time() - start < TIMEOUT:
-        if ser.read(1) == bytes([STX]):
-            packet_count += 1
-            print(f"[DEBUG] Found STX, reading packet #{packet_count}")
-            
-            header = ser.read(3)
-            if not header or len(header) < 3:
-                print(f"[DEBUG] Incomplete header: got {len(header) if header else 0} bytes")
-                continue
+    if not raw_bytes_received:
+        print(f"[DEBUG] No response received")
+        return b''
+    
+    # Process the collected bytes for packet parsing
+    all_raw_data = bytes(raw_bytes_received)
+    
+    # Look for STX and parse packets from the collected data
+    i = 0
+    while i < len(all_raw_data):
+        if all_raw_data[i] == STX:
+            # Check if we have enough bytes for header
+            if i + 4 > len(all_raw_data):
+                break
                 
+            header = all_raw_data[i+1:i+4]
             block_id, cmd, length = header
-            print(f"[DEBUG] Header: block_id={block_id}, cmd=0x{cmd:02X}, length={length}")
             
-            payload = ser.read(length) if length > 0 else b''
-            checksum = ser.read(1)
+            # Check if we have enough bytes for payload and checksum
+            packet_end = i + 4 + length + 1
+            if packet_end > len(all_raw_data):
+                break
+                
+            payload = all_raw_data[i+4:i+4+length] if length > 0 else b''
+            checksum_byte = all_raw_data[i+4+length]
             
-            if not checksum:
-                print(f"[DEBUG] No checksum received")
-                continue
-
-            full = bytes([STX]) + header + payload
+            full = all_raw_data[i:i+4+length]
             expected_checksum = calc_checksum(full)
-            actual_checksum = checksum[0]
-            
-            print(f"[DEBUG] Checksum: expected=0x{expected_checksum:02X}, actual=0x{actual_checksum:02X}")
+            actual_checksum = checksum_byte
             
             if actual_checksum != expected_checksum:
-                print(f"[DEBUG] CHECKSUM MISMATCH!")
-                debug_packet(full + checksum, "BAD CHECKSUM PACKET")
+                print(f"[DEBUG] Checksum mismatch for block {block_id}")
+                i += 1
                 continue
                 
-            print(f"[DEBUG] Checksum OK")
-            
             if block_id != expected_block_id:
-                print(f"[DEBUG] Wrong block ID: got {block_id}, expected {expected_block_id}")
+                i += 1
                 continue
                 
             if cmd != expected_reply_cmd:
-                print(f"[DEBUG] Wrong command: got 0x{cmd:02X}, expected 0x{expected_reply_cmd:02X}")
+                i += 1
                 continue
                 
-            print(f"[DEBUG] MATCH! Returning response")
-            debug_packet(full + checksum, "ACCEPTED RESPONSE")
-            return full + checksum
+            print(f"[DEBUG] Valid response received from block {block_id}")
+            response_packet = full + bytes([checksum_byte])
+            return response_packet
+        
+        i += 1
             
-    print(f"[DEBUG] Timeout after {TIMEOUT}s, received {packet_count} packets")
+    print(f"[DEBUG] No valid response found in {len(all_raw_data)} bytes received")
     return b''
 
 

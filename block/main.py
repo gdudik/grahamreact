@@ -86,6 +86,7 @@ def send(data: bytes):
 def send_ack(cmd_code: int):
     packet = bytes([STX, BLOCK_ID, reply_cmd(cmd_code), 0])  # No payload
     packet += bytes([calc_checksum(packet)])
+    print(packet)
     send(packet)
 
 
@@ -93,6 +94,7 @@ def read_packet(timeout_ms=100):
     start = time.ticks_ms()
     while time.ticks_diff(time.ticks_ms(), start) < timeout_ms:
         if uart.any():
+            #print(uart.read())
             if uart.read(1) == b'\xAA':  # Start-of-frame
                 header = uart.read(3)  # block_id, cmd, length
                 if not header or len(header) < 3:
@@ -108,10 +110,11 @@ def read_packet(timeout_ms=100):
 # --- Command Handlers ---
 
 
-def handle_ping(is_broadcast: bool):
+def handle_ping():
     debug_log("PING received")
-    if not is_broadcast:
-        send_ack(CMD_PING)
+    print("PING received")
+    #if not is_broadcast:
+    send_ack(CMD_PING)
 
 
 def handle_arm(is_broadcast: bool):
@@ -250,7 +253,7 @@ def listen():
         if block_id == BROADCAST_ID:
             is_broadcast = True
         if cmd == CMD_PING:
-            handle_ping(is_broadcast)
+            handle_ping()
         elif cmd == CMD_ARM:
             handle_arm(is_broadcast)
         elif cmd == CMD_SET:
@@ -268,4 +271,4 @@ def listen():
 
 
 # --- Start ---
-listen()
+#listen()
