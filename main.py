@@ -1,10 +1,7 @@
 import serial
 import time
 from typing import Literal
-from gpiozero import OutputDevice
-from gpiozero import Device
-from gpiozero.pins.pigpio import PiGPIOFactory
-Device.pin_factory = PiGPIOFactory()
+import Rpi.GPIO as GPIO
 from fastapi import FastAPI
 
 app = FastAPI()
@@ -27,6 +24,8 @@ CMD_SEND_RT_REPORT = 0x07
 BROADCAST_ID = 0x99
 REPLY_FLAG = 0x40
 
+# --- PINS ---
+GPIO.setmode()
 abort_pin = OutputDevice(17)
 abort_pin.off()
 
