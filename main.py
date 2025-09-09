@@ -252,50 +252,51 @@ def dump_all_blocks():
     results = []
     
     with serial.Serial(SERIAL_PORT, BAUD, timeout=0) as ser:
-        for block_id in BLOCK_IDS:
-            print(f"Requesting dump from block {block_id}...")
-            
-            # Start timer
-            start_time = time.time()
-            
-            # Send dump command
-            pkt = build_dump_packet(block_id)
-            ser_write(ser, pkt)
-            
-            # Start reading file chunks immediately (no ACK wait needed)
-            # The block sends data first, then ACK
-            file_data = read_dump_chunks(ser, block_id)
-            
-            # End timer and calculate duration
-            end_time = time.time()
-            duration = end_time - start_time
-            
-            if file_data:
-                # Calculate throughput
-                throughput = len(file_data) / duration / 1024  # KB/s
-                print(f"Block {block_id}: {len(file_data)} bytes in {duration:.2f}s ({throughput:.1f} KB/s)")
+        if len(active_blocks) > 0:
+            for block_id in active_blocks:
+                print(f"Requesting dump from block {block_id}...")
                 
-                # Save to file
-                filename = f"block_{block_id}_dump.bin"
-                try:
-                    with open(filename, "wb") as f:
-                        f.write(file_data)
+                # Start timer
+                start_time = time.time()
+                
+                # Send dump command
+                pkt = build_dump_packet(block_id)
+                ser_write(ser, pkt)
+                
+                # Start reading file chunks immediately (no ACK wait needed)
+                # The block sends data first, then ACK
+                file_data = read_dump_chunks(ser, block_id)
+                
+                # End timer and calculate duration
+                end_time = time.time()
+                duration = end_time - start_time
+                
+                if file_data:
+                    # Calculate throughput
+                    throughput = len(file_data) / duration / 1024  # KB/s
+                    print(f"Block {block_id}: {len(file_data)} bytes in {duration:.2f}s ({throughput:.1f} KB/s)")
                     
-                    results.append({
-                        "block_id": block_id,
-                        "status": "success",
-                        "filename": filename,
-                        "bytes_received": len(file_data)
-                    })
-                    print(f"Saved {len(file_data)} bytes to {filename}")
-                    
-                except IOError as e:
-                    results.append({
-                        "block_id": block_id,
-                        "status": f"file_write_error: {str(e)}",
-                        "filename": filename,
-                        "bytes_received": len(file_data)
-                    })
+                    # Save to file
+                    filename = f"block_{block_id}_dump.bin"
+                    try:
+                        with open(filename, "wb") as f:
+                            f.write(file_data)
+                        
+                        results.append({
+                            "block_id": block_id,
+                            "status": "success",
+                            "filename": filename,
+                            "bytes_received": len(file_data)
+                        })
+                        print(f"Saved {len(file_data)} bytes to {filename}")
+                        
+                    except IOError as e:
+                        results.append({
+                            "block_id": block_id,
+                            "status": f"file_write_error: {str(e)}",
+                            "filename": filename,
+                            "bytes_received": len(file_data)
+                        })
             else:
                 print(f"Block {block_id}: No data received in {duration:.2f}s")
                 results.append({
@@ -306,7 +307,8 @@ def dump_all_blocks():
                 })
             
             time.sleep(0.1)  # Small delay between blocks
-    
+        else:
+            print('No active blocks')
     return results
 
 
@@ -349,30 +351,33 @@ def get_reports():
     results = []
 
     with serial.Serial(SERIAL_PORT, BAUD, timeout=0) as ser:
-        for block_id in BLOCK_IDS:
-            pkt = build_send_report_packet(block_id)
-            ser_write(ser, pkt)
+        if len(active_blocks) > 0:
+            for block_id in active_blocks:
+                pkt = build_send_report_packet(block_id)
+                ser_write(ser, pkt)
 
-            response = read_response(ser, block_id, CMD_SEND_RT_REPORT)
-            # response format [STX, BLOCK_ID, CMD_SEND_RT_REPORT, 0x43, 0x41, len(payload)]) + payload
-            # in this case, payload is calculated_reaction.to_bytes(3, 'big') **in microseconds**
-            # status codes: CA (calculated), NG (no gun), NR (no reaction), ND (no data)
-            if response:
-                status_code = response[3:5].decode()
-                payload_len = response[5]
-                reaction = int.from_bytes(
-                    response[6:6+payload_len], byteorder='big', signed=True) / 1_000_000
-                results.append({
-                    "block_id": block_id,
-                    "status": status_code,
-                    "reaction": reaction
-                })
-            else:
-                results.append({
-                    "block_id": block_id,
-                    "status": "no_response_from_block"
-                })
-            time.sleep(0.05)
+                response = read_response(ser, block_id, CMD_SEND_RT_REPORT)
+                # response format [STX, BLOCK_ID, CMD_SEND_RT_REPORT, 0x43, 0x41, len(payload)]) + payload
+                # in this case, payload is calculated_reaction.to_bytes(3, 'big') **in microseconds**
+                # status codes: CA (calculated), NG (no gun), NR (no reaction), ND (no data)
+                if response:
+                    status_code = response[3:5].decode()
+                    payload_len = response[5]
+                    reaction = int.from_bytes(
+                        response[6:6+payload_len], byteorder='big', signed=True) / 1_000_000
+                    results.append({
+                        "block_id": block_id,
+                        "status": status_code,
+                        "reaction": reaction
+                    })
+                else:
+                    results.append({
+                        "block_id": block_id,
+                        "status": "no_response_from_block"
+                    })
+                time.sleep(0.05)
+        else:
+            print('No active blocks')
     return {"results": results}
 
 
@@ -380,22 +385,25 @@ def get_reports():
 def arm():
     results = []
     abort_pin(False)
-    for block_id in BLOCK_IDS:
-        with serial.Serial(SERIAL_PORT, BAUD, timeout=0) as ser:
-            pkt = build_arm_packet()
-            ser_write(ser,pkt)
-            response = read_response(ser, block_id, CMD_ARM)
-            if response:
+    if len(active_blocks) > 0:
+        for block_id in BLOCK_IDS:
+            with serial.Serial(SERIAL_PORT, BAUD, timeout=0) as ser:
+                pkt = build_arm_packet()
+                ser_write(ser,pkt)
+                response = read_response(ser, block_id, CMD_ARM)
                 if response:
+                    if response:
+                        results.append({
+                            "block_id": block_id,
+                            "status": "armed",
+                        })
+                else:
                     results.append({
                         "block_id": block_id,
-                        "status": "armed",
+                        "status": "no_response"
                     })
-            else:
-                results.append({
-                    "block_id": block_id,
-                    "status": "no_response"
-                })
+        else:
+            print('No active blocks')
     return {"results": results}
 
 
