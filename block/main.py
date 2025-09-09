@@ -34,7 +34,7 @@ if BLOCK_ID > 10:
     raise ValueError(f'Illegal Block ID: {BLOCK_ID}')
 
 BROADCAST_ID = 0x99
-BAUD = 1000000
+BAUD = 1500000
 REPLY_FLAG = 0x40
 
 TX_PIN = 0
@@ -42,7 +42,7 @@ RX_PIN = 1
 DIR_PIN = 2
 
 BOOT_LIGHT = Pin(3, Pin.OUT)
-BOOT_LIGHT.value(1)
+
 
 # --- COMMAND CODES ---
 STX = 0xAA
@@ -86,7 +86,6 @@ def send(data: bytes):
 def send_ack(cmd_code: int):
     packet = bytes([STX, BLOCK_ID, reply_cmd(cmd_code), 0])  # No payload
     packet += bytes([calc_checksum(packet)])
-    print(packet)
     send(packet)
 
 
@@ -110,14 +109,15 @@ def read_packet(timeout_ms=100):
 # --- Command Handlers ---
 
 
-def handle_ping():
+def handle_ping(is_broadcast: bool):
     debug_log("PING received")
     print("PING received")
-    #if not is_broadcast:
-    send_ack(CMD_PING)
+    if not is_broadcast:
+        send_ack(CMD_PING)
 
 
 def handle_arm(is_broadcast: bool):
+    debug_log('arm received')
     global gun_sensor_type, current_gender
     fifo_comms.setup(gun_sensor_type, current_gender)
     send_ack(CMD_ARM)
@@ -221,7 +221,7 @@ def dump(filepath, chunk_size=255):
                 total_bytes += len(chunk)
                 
                 try:
-                    packet = bytes([STX, BLOCK_ID, CMD_DUMP, len(chunk)]) + chunk
+                    packet = bytes([STX, BLOCK_ID, reply_cmd(CMD_DUMP), len(chunk)]) + chunk
                     packet += bytes([calc_checksum(packet)])
                     send(packet)
                 except Exception as e:
@@ -240,6 +240,7 @@ def dump(filepath, chunk_size=255):
 
 def listen():
     print("Listening (binary protocol)...")
+    BOOT_LIGHT.value(1)
     while True:
         is_broadcast = False
         result = read_packet()
@@ -253,7 +254,7 @@ def listen():
         if block_id == BROADCAST_ID:
             is_broadcast = True
         if cmd == CMD_PING:
-            handle_ping()
+            handle_ping(is_broadcast)
         elif cmd == CMD_ARM:
             handle_arm(is_broadcast)
         elif cmd == CMD_SET:
@@ -271,4 +272,4 @@ def listen():
 
 
 # --- Start ---
-#listen()
+listen()
