@@ -1,7 +1,7 @@
 import serial
 import time
 from typing import Literal
-import Rpi.GPIO as GPIO
+import RPi.GPIO as GPIO
 from fastapi import FastAPI
 
 app = FastAPI()
@@ -14,7 +14,7 @@ def debug_packet(packet: bytes, label: str):
 # --- COMMAND CODES ---
 STX = 0xAA
 CMD_PING = 0x01
-CMD_ARM = 0x02
+CMD_ARM = 0x02 
 CMD_SET = 0x03
 CMD_DUMP = 0x04
 CMD_SET_SENSOR = 0x05
@@ -25,12 +25,16 @@ BROADCAST_ID = 0x99
 REPLY_FLAG = 0x40
 
 # --- PINS ---
-GPIO.setmode()
-abort_pin = OutputDevice(17)
-abort_pin.off()
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(17, GPIO.OUT)
+def abort_pin(state: bool):
+    GPIO.output(17,state)
+abort_pin(False)
 
-rts_pin = OutputDevice(18)
-rts_pin.off()
+GPIO.setup(18, GPIO.OUT)
+def rts_pin(state: bool):
+    GPIO.output(18, state)
+rts_pin(False)
 
 BLOCK_IDS = range(1, 11)  # block IDs 1 through 10
 SERIAL_PORT = '/dev/ttyAMA0'  
@@ -38,12 +42,12 @@ BAUD = 1500000
 TIMEOUT = 0.2  # seconds
 
 def ser_write(ser: serial.Serial, packet: bytes):
-    rts_pin.on()
+    rts_pin(True)
     time.sleep(0.001)
     ser.write(packet)
     ser.flush()
     time.sleep(0.001)
-    rts_pin.off()
+    rts_pin(False)
 
 def calc_checksum(data: bytes) -> int:
     return sum(data) % 256
@@ -242,7 +246,7 @@ def read_dump_chunks(ser: serial.Serial, expected_block_id: int, timeout_seconds
 
 def dump_all_blocks():
     """Send dump command to all blocks and save received files."""
-    abort_pin.off()
+    abort_pin(False)
     results = []
     
     with serial.Serial(SERIAL_PORT, BAUD, timeout=0) as ser:
@@ -306,7 +310,7 @@ def dump_all_blocks():
 
 @app.post('/ping')
 def ping_all_blocks():
-    abort_pin.off()
+    abort_pin(False)
     results = []
 
     with serial.Serial(SERIAL_PORT, BAUD, timeout=0) as ser:
@@ -370,7 +374,7 @@ def get_reports():
 @app.post('/arm')
 def arm():
     results = []
-    abort_pin.off()
+    abort_pin(False)
     for block_id in BLOCK_IDS:
         with serial.Serial(SERIAL_PORT, BAUD, timeout=0) as ser:
             pkt = build_arm_packet()
@@ -418,4 +422,4 @@ def dump_blocks():
 
 @app.post('/abort')
 def abort_run():
-    abort_pin.on()
+    abort_pin(True)
