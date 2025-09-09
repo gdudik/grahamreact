@@ -24,6 +24,8 @@ CMD_SEND_RT_REPORT = 0x07
 BROADCAST_ID = 0x99
 REPLY_FLAG = 0x40
 
+active_blocks = []
+
 # --- PINS ---
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(17, GPIO.OUT)
@@ -310,7 +312,9 @@ def dump_all_blocks():
 
 @app.post('/ping')
 def ping_all_blocks():
+    global active_blocks
     abort_pin(False)
+    active_blocks = []
     results = []
 
     with serial.Serial(SERIAL_PORT, BAUD, timeout=0) as ser:
@@ -323,6 +327,7 @@ def ping_all_blocks():
             response = read_response(ser, block_id, CMD_PING)
             if response:
                 debug_packet(response, f"RECEIVED from block {block_id}")
+                active_blocks.append(block_id)
                 results.append({
                     "block_id": block_id,
                     "status": "ok",
@@ -335,7 +340,7 @@ def ping_all_blocks():
                 })
 
             time.sleep(0.05)  # small gap between pings
-
+    print("active", active_blocks)
     return {"results": results}
 
 
