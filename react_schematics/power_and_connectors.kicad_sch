@@ -2791,7 +2791,7 @@
 			)
 			(justify left)
 		)
-		(uuid "2eae551c-3669-4139-88a9-8f330beb15a0")
+		(uuid "2eae551c-3669-4139-88a9-8f330beb15a1")
 	)
 	(hierarchical_label "5V_PPWR"
 		(shape output)
@@ -2835,7 +2835,7 @@
 			)
 			(justify left)
 		)
-		(uuid "f2b666ad-0882-4d6f-8a2f-7c709cbdf9a2")
+		(uuid "f2b666ad-0882-4d6f-8a2f-7c709cbdf9a3")
 	)
 	(hierarchical_label "GUN_SENSE"
 		(shape bidirectional)
@@ -2846,7 +2846,7 @@
 			)
 			(justify left)
 		)
-		(uuid "f2b666ad-0882-4d6f-8a2f-7c709cbdf9a2")
+		(uuid "f2b666ad-0882-4d6f-8a2f-7c709cbdf9a4")
 	)
 	(hierarchical_label "RS485_A"
 		(shape bidirectional)
@@ -2857,7 +2857,7 @@
 			)
 			(justify left)
 		)
-		(uuid "f2b666ad-0882-4d6f-8a2f-7c709cbdf9a2")
+		(uuid "f2b666ad-0882-4d6f-8a2f-7c709cbdf9a5")
 	)
 	(symbol
 		(lib_id "react_schematics-eagle-import:RESISTOR_0603_NOOUT")

@@ -34,7 +34,7 @@ if BLOCK_ID > 10:
     raise ValueError(f'Illegal Block ID: {BLOCK_ID}')
 
 BROADCAST_ID = 0x99
-BAUD = 1500000
+BAUD = 1000000
 REPLY_FLAG = 0x40
 
 TX_PIN = 0
@@ -53,6 +53,7 @@ CMD_DUMP = 0x04
 CMD_SET_SENSOR = 0x05
 CMD_SET_GENDER = 0x06
 CMD_SEND_RT_REPORT = 0x07
+
 
 # --- UART and GPIO Setup ---
 uart = UART(0, baudrate=BAUD, tx=Pin(TX_PIN), rx=Pin(RX_PIN))
@@ -86,6 +87,7 @@ def send(data: bytes):
 def send_ack(cmd_code: int):
     packet = bytes([STX, BLOCK_ID, reply_cmd(cmd_code), 0])  # No payload
     packet += bytes([calc_checksum(packet)])
+    print(packet)
     send(packet)
 
 
@@ -175,18 +177,18 @@ def handle_send_rt_report():
         b = calculated_reaction.to_bytes(3, 'big')
         # CA (calc) + calculated reaction time
         packet = bytes(
-            [STX, BLOCK_ID, reply_cmd(CMD_SEND_RT_REPORT), 0x43, 0x41, len(b)]) + b
+            [STX, BLOCK_ID, reply_cmd(CMD_SEND_RT_REPORT), (len(b) + 2), 0x43, 0x41]) + b
         packet += bytes([calc_checksum(packet)])
     elif rt_timestamp is not None and gun_timestamp is None:
-        packet = bytes([STX, BLOCK_ID, reply_cmd(CMD_SEND_RT_REPORT),
+        packet = bytes([STX, BLOCK_ID, reply_cmd(CMD_SEND_RT_REPORT), 2,
                        0x4E, 0x47])  # NG--no gun
         packet += bytes([calc_checksum(packet)])
     elif rt_timestamp is None and gun_timestamp is not None:
-        packet = bytes([STX, BLOCK_ID, reply_cmd(CMD_SEND_RT_REPORT),
+        packet = bytes([STX, BLOCK_ID, reply_cmd(CMD_SEND_RT_REPORT), 2,
                        0x4E, 0x52])  # NR--no reaction
         packet += bytes([calc_checksum(packet)])
     elif rt_timestamp is None and gun_timestamp is None:
-        packet = bytes([STX, BLOCK_ID, reply_cmd(CMD_SEND_RT_REPORT),
+        packet = bytes([STX, BLOCK_ID, reply_cmd(CMD_SEND_RT_REPORT), 2,
                        0x4E, 0x44])  # ND--no data
         packet += bytes([calc_checksum(packet)])
     send(packet)
@@ -272,4 +274,4 @@ def listen():
 
 
 # --- Start ---
-listen()
+#listen()
