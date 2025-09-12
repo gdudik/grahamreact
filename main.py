@@ -4,6 +4,7 @@ import time
 from typing import Literal
 import RPi.GPIO as GPIO
 from fastapi import FastAPI
+import checksum
 
 app = FastAPI()
 
@@ -67,51 +68,14 @@ def ser_write(ser: serial.Serial, packet: bytes):
     time.sleep(0.001)
 
 
-def calc_checksum(data: bytes) -> int:
-    return sum(data) % 256
+
 
 
 def reply_cmd(cmd):
     return (cmd | REPLY_FLAG)
 
 
-def build_ping_packet(block_id: int) -> bytes:
-    header = bytes([STX, block_id, CMD_PING, 0])  # 0-length payload
-    return header + bytes([calc_checksum(header)])
 
-
-def build_gender_packet(block_id: int, gender: Literal['M', 'F']) -> bytes:
-    payload = gender.encode('utf-8')
-    header = bytes([STX, block_id, CMD_SET_GENDER, 1])
-    packet = header + payload
-    return packet + bytes([calc_checksum(packet)])
-
-
-def build_arm_packet() -> bytes:
-    header = bytes([STX, BROADCAST_ID, CMD_ARM, 0])
-    return header + bytes([calc_checksum(header)])
-
-
-def build_set_packet() -> bytes:
-    header = bytes([STX, BROADCAST_ID, CMD_SET, 0])
-    return header + bytes([calc_checksum(header)])
-
-
-def build_sensor_type_packet(block_id: int, sensor_type: Literal['NC', 'NO']) -> bytes:
-    payload = sensor_type.encode('utf-8')
-    header = bytes([STX, block_id, CMD_SET_SENSOR, 2])
-    packet = header + payload
-    return packet + bytes([calc_checksum(packet)])
-
-
-def build_send_report_packet(block_id: int) -> bytes:
-    header = bytes([STX, block_id, CMD_SEND_RT_REPORT, 0])
-    return header + bytes([calc_checksum(header)])
-
-
-def build_dump_packet(block_id: int) -> bytes:
-    header = bytes([STX, block_id, CMD_DUMP, 0])
-    return header + bytes([calc_checksum(header)])
 
 def read_one_packet(ser: serial.Serial, deadline: float):
     """
@@ -263,14 +227,14 @@ def read_dump_chunks(ser: serial.Serial, expected_block_id: int, timeout_seconds
                 # Read and verify checksum for the ACK packet
                 checksum = read_exact_bytes(ser, 1, 1.0)
                 full = bytes([STX]) + header
-                if checksum and len(checksum) == 1 and checksum[0] == calc_checksum(full):
+                if checksum and len(checksum) == 1 and checksum[0] == checksum.calc_checksum(full):
                     if checksum_failures > 0:
                         print(
                             f"Block {expected_block_id}: {checksum_failures} checksum failures detected")
                     break
                 else:
                     print(
-                        f"ACK checksum invalid: got {checksum[0] if checksum and len(checksum) > 0 else 'None'}, expected {calc_checksum(full)}")
+                        f"ACK checksum invalid: got {checksum[0] if checksum and len(checksum) > 0 else 'None'}, expected {checksum.calc_checksum(full)}")
                 continue
 
             # Read the chunk payload with blocking read
@@ -284,7 +248,7 @@ def read_dump_chunks(ser: serial.Serial, expected_block_id: int, timeout_seconds
             # Read and verify checksum with blocking read
             checksum = read_exact_bytes(ser, 1, 1.0)
             full = bytes([STX]) + header + payload
-            expected_checksum = calc_checksum(full)
+            expected_checksum = checksum.calc_checksum(full)
 
             if checksum and len(checksum) == 1 and checksum[0] == expected_checksum:
                 chunk_count += 1
@@ -506,3 +470,6 @@ def dump_blocks():
 @app.post('/abort')
 def abort_run():
     abort_pin(True)
+
+@app.post('/set_gender/{gender}')
+def set_gender(gender: str):
