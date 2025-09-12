@@ -34,7 +34,7 @@ gpiozero.Device.pin_factory = PiGPIOFactory()
 abort_pin = gpiozero.OutputDevice(pin=27)
 abort_pin.off()
 
-false_start_alert_pin = gpiozero.Button(4, pull_up=False)
+false_start_alert_pin = gpiozero.Button(4, pull_up=False, bounce_time=0.2)
 
 def false_start_alert():
     playsound('uhoh.wav', block=False)
