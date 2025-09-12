@@ -34,7 +34,7 @@ if BLOCK_ID > 10:
     raise ValueError(f'Illegal Block ID: {BLOCK_ID}')
 
 BROADCAST_ID = 0x99
-BAUD = 1000000
+BAUD = 1500000
 REPLY_FLAG = 0x40
 
 TX_PIN = 0
@@ -77,6 +77,7 @@ def calc_checksum(data: bytes) -> int:
 
 
 def send(data: bytes):
+    time.sleep_us(250)
     rts.value(1)
     uart.write(data)
     while not uart.txdone():
@@ -119,14 +120,18 @@ def handle_ping(is_broadcast: bool):
 
 
 def handle_arm(is_broadcast: bool):
-    debug_log('arm received')
     global gun_sensor_type, current_gender
+    print('gun sensor:', gun_sensor_type)
+    print('current gender', current_gender)
     fifo_comms.setup(gun_sensor_type, current_gender)
     send_ack(CMD_ARM)
 
 
 def handle_set(is_broadcast: bool):
-    return fifo_comms.start_loop()
+    global gun_timestamp, rt_timestamp
+    gun_timestamp = None
+    rt_timestamp = None
+    gun_timestamp, rt_timestamp = fifo_comms.start_loop()
 
 
 def handle_dump(is_broadcast: bool):
@@ -170,6 +175,8 @@ def handle_set_gender(is_broadcast: bool, payload: bytes):
 
 def handle_send_rt_report():
     global rt_timestamp, gun_timestamp
+    print('rt_timestamp', rt_timestamp)
+    print('gun_timestamp', gun_timestamp)
     if rt_timestamp is not None and gun_timestamp is not None:
         # pre calculated 1/32768 for rtc timestamps in microseconds
         calculated_reaction = int(

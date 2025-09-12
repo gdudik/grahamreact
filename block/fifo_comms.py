@@ -65,6 +65,7 @@ fs_alert = Pin(ALERT_PIN, Pin.OUT, Pin.PULL_DOWN)
 
 GUN_FIRED_PIN = micropython.const(20)
 gun_fired = Pin(GUN_FIRED_PIN, Pin.OUT)
+gun_fired_internal_ts = None 
 
 LOGGING_PIN = micropython.const(21)
 logger_running = Pin(LOGGING_PIN, Pin.OUT)
@@ -87,13 +88,14 @@ int_pin.irq(trigger=Pin.IRQ_RISING, handler=threshold_interrupt)
 ## GUN INTERRUPT
 @micropython.native
 def gun_stuff(_):
-    global gun_timestamp
+    global gun_timestamp, gun_fired_internal_ts
     imu.write_reg(0x4B, 0b00000100) #SIGNAL PATH RESET, STROBE FOR TIMESTAMP BIT
     imu.set_reg_bank(0x01)
     ts_lo, ts_mid, ts_hi = imu.read_reg(0x62, 3)
     imu.set_reg_bank(0x00)
     gun_timestamp = (int(ts_hi) << 16) | (int(ts_mid) << 8) | int(ts_lo)
     gun_fired(1)
+    gun_fired_internal_ts = time.ticks_ms() #used for ending the run after the gun fires instead of letting the run time out
 
 
 
@@ -201,14 +203,15 @@ def get_count():
     return (count_hi << 8) | count_lo
 
 def setup(sensor_type, gender):
-    global gun_timestamp, runner_started_ts, accel_threshold, int_counter, ts_rollovers
+    global gun_timestamp, runner_started_ts, accel_threshold, int_counter, ts_rollovers, gun_fired_internal_ts
     machine.freq(200000000)
     set_sensor_type(sensor_type)
     if gender == 'M':
         accel_threshold = ACCEL_THRESHOLD_MEN
     elif gender == 'W':
         accel_threshold = ACCEL_THRESHOLD_WOMEN
-    gun_fired(0)
+    gun_fired.value(0)
+    gun_fired_internal_ts = None
     gun_timestamp = None
     runner_started_ts = None
     fs_alert.value(0)
@@ -259,7 +262,7 @@ def make_timestamp_packet(type, ts):
 
 def start_loop():
     print('starting loop')
-    global wp, fifo_ready, gun_triggered, gun_timestamp, int_counter, ts_rollovers, runner_started_ts
+    global wp, fifo_ready, gun_triggered, gun_timestamp, int_counter, ts_rollovers, runner_started_ts, gun_fired_internal_ts
     logger_running.value(1)
     imu.write_reg(0x4E, 0b00000011)
     start = time.ticks_ms()
@@ -270,6 +273,9 @@ def start_loop():
         time.sleep_us(400)
         if runner_started_ts:
             if time.ticks_diff(time.ticks_ms(), runner_started_ts) > 1000:
+                break
+        if gun_fired_internal_ts:
+            if time.ticks_diff(time.ticks_ms(), gun_fired_internal_ts) > 1000:
                 break
         if run_aborted.value() == 1:
             break
@@ -304,8 +310,9 @@ def start_loop():
 
     gc.collect()
     logger_running.value(0)
-    if gun_timestamp or reaction_time_timestamp:
-        return gun_timestamp, reaction_time_timestamp
+    gun_fired.value(0)
+    
+    return gun_timestamp, reaction_time_timestamp
 
     
 
