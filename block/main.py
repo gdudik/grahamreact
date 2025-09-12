@@ -1,6 +1,7 @@
 from machine import Pin, UART
 import time
 import fifo_comms
+import lib.command_codes as cmdc
 
 # --- DEBUG LOGGING ---
 def debug_log(message):
@@ -33,27 +34,15 @@ if BLOCK_ID == 0:
 if BLOCK_ID > 10:
     raise ValueError(f'Illegal Block ID: {BLOCK_ID}')
 
-BROADCAST_ID = 0x99
+
 BAUD = 1500000
-REPLY_FLAG = 0x40
+
 
 TX_PIN = 0
 RX_PIN = 1
 DIR_PIN = 2
 
 BOOT_LIGHT = Pin(3, Pin.OUT)
-
-
-# --- COMMAND CODES ---
-STX = 0xAA
-CMD_PING = 0x01
-CMD_ARM = 0x02
-CMD_SET = 0x03
-CMD_DUMP = 0x04
-CMD_SET_SENSOR = 0x05
-CMD_SET_GENDER = 0x06
-CMD_SEND_RT_REPORT = 0x07
-
 
 # --- UART and GPIO Setup ---
 uart = UART(0, baudrate=BAUD, tx=Pin(TX_PIN), rx=Pin(RX_PIN))
@@ -68,9 +57,6 @@ gun_timestamp = None
 rt_timestamp = None
 
 # --- Low-Level Functions ---
-def reply_cmd(cmd):
-    return (cmd | REPLY_FLAG)
-
 
 def calc_checksum(data: bytes) -> int:
     return sum(data) % 256
@@ -86,7 +72,7 @@ def send(data: bytes):
 
 
 def send_ack(cmd_code: int):
-    packet = bytes([STX, BLOCK_ID, reply_cmd(cmd_code), 0])  # No payload
+    packet = bytes([cmdc.STX, BLOCK_ID, cmdc.reply_cmd(cmd_code), 0])  # No payload
     packet += bytes([calc_checksum(packet)])
     print(packet)
     send(packet)
@@ -104,7 +90,7 @@ def read_packet(timeout_ms=100):
                 block_id, cmd, length = header
                 payload = uart.read(length) or b''
                 checksum = uart.read(1)
-                full_packet = bytes([STX]) + header + (payload or b'')
+                full_packet = bytes([cmdc.STX]) + header + (payload or b'')
                 if checksum and checksum[0] == calc_checksum(full_packet):
                     return block_id, cmd, payload
     return None
@@ -116,7 +102,7 @@ def handle_ping(is_broadcast: bool):
     debug_log("PING received")
     print("PING received")
     if not is_broadcast:
-        send_ack(CMD_PING)
+        send_ack(cmdc.CMD_PING)
 
 
 def handle_arm(is_broadcast: bool):
@@ -124,7 +110,7 @@ def handle_arm(is_broadcast: bool):
     print('gun sensor:', gun_sensor_type)
     print('current gender', current_gender)
     fifo_comms.setup(gun_sensor_type, current_gender)
-    send_ack(CMD_ARM)
+    send_ack(cmdc.CMD_ARM)
 
 
 def handle_set(is_broadcast: bool):
@@ -139,7 +125,7 @@ def handle_dump(is_broadcast: bool):
     print("DUMP request received")
     dump("overall_buffer.bin")
     debug_log("DUMP transmission completed, sending ACK")
-    send_ack(CMD_DUMP)
+    send_ack(cmdc.CMD_DUMP)
     debug_log("ACK sent for DUMP command")
 
 
@@ -151,7 +137,7 @@ def handle_set_sensor(is_broadcast: bool, payload: bytes):
             gun_sensor_type = s
             print(f"Sensor type set to: {s}")
             if not is_broadcast:
-                send_ack(CMD_SET_SENSOR)
+                send_ack(cmdc.CMD_SET_SENSOR)
         else:
             print("Invalid sensor type payload")
     except Exception as e:
@@ -166,7 +152,7 @@ def handle_set_gender(is_broadcast: bool, payload: bytes):
             current_gender = s
             print(f"Gender set to: {s}")
             if not is_broadcast:
-                send_ack(CMD_SET_GENDER)
+                send_ack(cmdc.CMD_SET_GENDER)
         else:
             print("Invalid gender payload")
     except Exception as e:
@@ -184,18 +170,18 @@ def handle_send_rt_report():
         b = calculated_reaction.to_bytes(3, 'big')
         # CA (calc) + calculated reaction time
         packet = bytes(
-            [STX, BLOCK_ID, reply_cmd(CMD_SEND_RT_REPORT), (len(b) + 2), 0x43, 0x41]) + b
+            [cmdc.STX, BLOCK_ID, cmdc.reply_cmd(cmdc.CMD_SEND_RT_REPORT), (len(b) + 2), 0x43, 0x41]) + b
         packet += bytes([calc_checksum(packet)])
     elif rt_timestamp is not None and gun_timestamp is None:
-        packet = bytes([STX, BLOCK_ID, reply_cmd(CMD_SEND_RT_REPORT), 2,
+        packet = bytes([cmdc.STX, BLOCK_ID, cmdc.reply_cmd(cmdc.CMD_SEND_RT_REPORT), 2,
                        0x4E, 0x47])  # NG--no gun
         packet += bytes([calc_checksum(packet)])
     elif rt_timestamp is None and gun_timestamp is not None:
-        packet = bytes([STX, BLOCK_ID, reply_cmd(CMD_SEND_RT_REPORT), 2,
+        packet = bytes([cmdc.STX, BLOCK_ID, cmdc.reply_cmd(cmdc.CMD_SEND_RT_REPORT), 2,
                        0x4E, 0x52])  # NR--no reaction
         packet += bytes([calc_checksum(packet)])
     elif rt_timestamp is None and gun_timestamp is None:
-        packet = bytes([STX, BLOCK_ID, reply_cmd(CMD_SEND_RT_REPORT), 2,
+        packet = bytes([cmdc.STX, BLOCK_ID, cmdc.reply_cmd(cmdc.CMD_SEND_RT_REPORT), 2,
                        0x4E, 0x44])  # ND--no data
         packet += bytes([calc_checksum(packet)])
     send(packet)
@@ -230,7 +216,7 @@ def dump(filepath, chunk_size=255):
                 total_bytes += len(chunk)
                 
                 try:
-                    packet = bytes([STX, BLOCK_ID, reply_cmd(CMD_DUMP), len(chunk)]) + chunk
+                    packet = bytes([cmdc.STX, BLOCK_ID, cmdc.reply_cmd(cmdc.CMD_DUMP), len(chunk)]) + chunk
                     packet += bytes([calc_checksum(packet)])
                     send(packet)
                 except Exception as e:
@@ -258,23 +244,23 @@ def listen():
 
         block_id, cmd, payload = result
 
-        if block_id not in (BLOCK_ID, BROADCAST_ID):
+        if block_id not in (BLOCK_ID, cmdc.BROADCAST_ID):
             continue  # Not for this node, not broadcast
-        if block_id == BROADCAST_ID:
+        if block_id == cmdc.BROADCAST_ID:
             is_broadcast = True
-        if cmd == CMD_PING:
+        if cmd == cmdc.CMD_PING:
             handle_ping(is_broadcast)
-        elif cmd == CMD_ARM:
+        elif cmd == cmdc.CMD_ARM:
             handle_arm(is_broadcast)
-        elif cmd == CMD_SET:
+        elif cmd == cmdc.CMD_SET:
             handle_set(is_broadcast)
-        elif cmd == CMD_DUMP:
+        elif cmd == cmdc.CMD_DUMP:
             handle_dump(is_broadcast)
-        elif cmd == CMD_SET_SENSOR:
+        elif cmd == cmdc.CMD_SET_SENSOR:
             handle_set_sensor(is_broadcast, payload)
-        elif cmd == CMD_SET_GENDER:
+        elif cmd == cmdc.CMD_SET_GENDER:
             handle_set_gender(is_broadcast, payload)
-        elif cmd == CMD_SEND_RT_REPORT:
+        elif cmd == cmdc.CMD_SEND_RT_REPORT:
             handle_send_rt_report()
         else:
             print(f"Unknown command: {cmd}")

@@ -1,0 +1,14 @@
+STX = 0xAA
+CMD_PING = 0x01
+CMD_ARM = 0x02
+CMD_SET = 0x03
+CMD_DUMP = 0x04
+CMD_SET_SENSOR = 0x05
+CMD_SET_GENDER = 0x06
+CMD_SEND_RT_REPORT = 0x07
+
+REPLY_FLAG = 0x40
+BROADCAST_ID = 0x99
+
+def reply_cmd(cmd):
+    return (cmd | REPLY_FLAG)

@@ -4,7 +4,9 @@ import time
 from typing import Literal
 import RPi.GPIO as GPIO
 from fastapi import FastAPI
-import checksum
+import command_codes as cmdc
+import checksum as cks
+import builders as bld
 
 app = FastAPI()
 
@@ -19,18 +21,8 @@ def _time_left(deadline: float) -> float:
     t = deadline - time.monotonic()
     return t if t > 0 else 0.0
 
-# --- COMMAND CODES ---
-STX = 0xAA
-CMD_PING = 0x01
-CMD_ARM = 0x02
-CMD_SET = 0x03
-CMD_DUMP = 0x04
-CMD_SET_SENSOR = 0x05
-CMD_SET_GENDER = 0x06
-CMD_SEND_RT_REPORT = 0x07
 
-BROADCAST_ID = 0x99
-REPLY_FLAG = 0x40
+
 
 active_blocks = []
 
@@ -68,15 +60,6 @@ def ser_write(ser: serial.Serial, packet: bytes):
     time.sleep(0.001)
 
 
-
-
-
-def reply_cmd(cmd):
-    return (cmd | REPLY_FLAG)
-
-
-
-
 def read_one_packet(ser: serial.Serial, deadline: float):
     """
     Read exactly one framed packet: [STX][block_id][cmd][len][payload...][csum]
@@ -87,7 +70,7 @@ def read_one_packet(ser: serial.Serial, deadline: float):
         b = ser.read(1)
         if not b:
             continue
-        if b[0] != STX:
+        if b[0] != cmdc.STX:
             continue
 
         # 2) Fixed 3-byte header
@@ -104,8 +87,8 @@ def read_one_packet(ser: serial.Serial, deadline: float):
         if len(csum) != 1:
             return None
 
-        full_wo = bytes([STX]) + head + payload
-        if calc_checksum(full_wo) != csum[0]:
+        full_wo = bytes([cmdc.STX]) + head + payload
+        if cks.calc_checksum(full_wo) != csum[0]:
             continue  # bad frame; keep hunting
 
         return (block_id, cmd, payload)
@@ -118,7 +101,7 @@ def read_response(ser: serial.Serial, expected_block_id: int, return_cmd) -> byt
     Always prints whatever raw bytes were captured, even if invalid.
     Returns the full verified frame (with checksum) or b'' if not found.
     """
-    expected_cmd = reply_cmd(return_cmd)
+    expected_cmd = cmdc.reply_cmd(return_cmd)
     deadline = time.time() + TIMEOUT
     raw = bytearray()
 
@@ -141,7 +124,7 @@ def read_response(ser: serial.Serial, expected_block_id: int, return_cmd) -> byt
     # Try to parse frames from raw
     i = 0
     while i < len(raw):
-        if raw[i] != STX:
+        if raw[i] != cmdc.STX:
             i += 1
             continue
 
@@ -159,8 +142,8 @@ def read_response(ser: serial.Serial, expected_block_id: int, return_cmd) -> byt
         payload = raw[i+4:i+4+length]
         checksum = raw[i+4+length]
         full_wo = raw[i:i+4+length]
-        if calc_checksum(full_wo) != checksum:
-            print(f"[DEBUG] Bad checksum at pos {i} (got {checksum:02X}, expected {calc_checksum(full_wo):02X})")
+        if cks.calc_checksum(full_wo) != checksum:
+            print(f"[DEBUG] Bad checksum at pos {i} (got {checksum:02X}, expected {cks.calc_checksum(full_wo):02X})")
             i += 1
             continue
 
@@ -204,7 +187,7 @@ def read_dump_chunks(ser: serial.Serial, expected_block_id: int, timeout_seconds
     wrong_packets = 0
 
     while time.time() - start_time < timeout_seconds:
-        if ser.read(1) == bytes([STX]):
+        if ser.read(1) == bytes([cmdc.STX]):
             # Read header with blocking read
             header = read_exact_bytes(ser, 3, 1.0)
             if not header or len(header) < 3:
@@ -215,10 +198,10 @@ def read_dump_chunks(ser: serial.Serial, expected_block_id: int, timeout_seconds
             block_id, cmd, length = header
 
             # Check if this is the expected block and command
-            if block_id != expected_block_id or cmd != reply_cmd(CMD_DUMP):
+            if block_id != expected_block_id or cmd != cmdc.reply_cmd(cmdc.CMD_DUMP):
                 wrong_packets += 1
                 print(
-                    f"Wrong packet: block_id={block_id} (expected {expected_block_id}), cmd={cmd} (expected {CMD_DUMP})")
+                    f"Wrong packet: block_id={block_id} (expected {expected_block_id}), cmd={cmd} (expected {cmdc.CMD_DUMP})")
                 continue
 
             # If length is 0, this is the ACK packet (end of transmission)
@@ -226,15 +209,15 @@ def read_dump_chunks(ser: serial.Serial, expected_block_id: int, timeout_seconds
                 print(f"Received ACK packet from block {expected_block_id}")
                 # Read and verify checksum for the ACK packet
                 checksum = read_exact_bytes(ser, 1, 1.0)
-                full = bytes([STX]) + header
-                if checksum and len(checksum) == 1 and checksum[0] == checksum.calc_checksum(full):
+                full = bytes([cmdc.STX]) + header
+                if checksum and len(checksum) == 1 and checksum[0] == cks.calc_checksum(full):
                     if checksum_failures > 0:
                         print(
                             f"Block {expected_block_id}: {checksum_failures} checksum failures detected")
                     break
                 else:
                     print(
-                        f"ACK checksum invalid: got {checksum[0] if checksum and len(checksum) > 0 else 'None'}, expected {checksum.calc_checksum(full)}")
+                        f"ACK checksum invalid: got {checksum[0] if checksum and len(checksum) > 0 else 'None'}, expected {cks.calc_checksum(full)}")
                 continue
 
             # Read the chunk payload with blocking read
@@ -247,8 +230,8 @@ def read_dump_chunks(ser: serial.Serial, expected_block_id: int, timeout_seconds
 
             # Read and verify checksum with blocking read
             checksum = read_exact_bytes(ser, 1, 1.0)
-            full = bytes([STX]) + header + payload
-            expected_checksum = checksum.calc_checksum(full)
+            full = bytes([cmdc.STX]) + header + payload
+            expected_checksum = cks.calc_checksum(full)
 
             if checksum and len(checksum) == 1 and checksum[0] == expected_checksum:
                 chunk_count += 1
@@ -284,7 +267,7 @@ def dump_all_blocks():
             start_time = time.time()
 
             # Send dump command
-            pkt = build_dump_packet(block_id)
+            pkt = bld.build_dump_packet(block_id)
             ser_write(ser, pkt)
 
             # Start reading file chunks immediately (no ACK wait needed)
@@ -345,11 +328,11 @@ def ping_all_blocks():
     with open_rs485() as ser:
         for block_id in BLOCK_IDS:
             print(f"\n[DEBUG] === PINGING BLOCK {block_id} ===")
-            pkt = build_ping_packet(block_id)
+            pkt = bld.build_ping_packet(block_id)
             debug_packet(pkt, f"SENDING to block {block_id}")
             ser_write(ser, pkt)
 
-            response = read_response(ser, block_id, CMD_PING)
+            response = read_response(ser, block_id, cmdc.CMD_PING)
             if response:
                 debug_packet(response, f"RECEIVED from block {block_id}")
                 active_blocks.append(block_id)
@@ -376,9 +359,9 @@ def get_reports():
         if not active_blocks:
             return 'No Active Blocks'
         for block_id in active_blocks:
-            pkt = build_send_report_packet(block_id)
+            pkt = bld.build_send_report_packet(block_id)
             ser_write(ser, pkt)
-            response = read_response(ser, block_id, CMD_SEND_RT_REPORT)
+            response = read_response(ser, block_id, cmdc.CMD_SEND_RT_REPORT)
             # response format [STX, BLOCK_ID, CMD_SEND_RT_REPORT, len(payload)], <<2 byte status code as part of payload>>) + payload
             # in this case, payload is calculated_reaction.to_bytes(3, 'big') **in microseconds**
             # status codes: CA (calculated), NG (no gun), NR (no reaction), ND (no data)
@@ -421,9 +404,9 @@ def arm():
         if not active_blocks:
             return 'No Active Blocks'
         for block_id in active_blocks:
-            pkt = build_arm_packet()
+            pkt = bld.build_arm_packet(block_id)
             ser_write(ser, pkt)
-            response = read_response(ser, block_id, CMD_ARM)
+            response = read_response(ser, block_id, cmdc.CMD_ARM)
             if response:
                 results.append({
                     "block_id": block_id,
@@ -440,7 +423,7 @@ def arm():
 @app.post('/set')
 def set():
     with open_rs485() as ser:
-        pkt = build_set_packet()
+        pkt = bld.build_set_packet()
         ser_write(ser, pkt)
 
 
@@ -472,4 +455,22 @@ def abort_run():
     abort_pin(True)
 
 @app.post('/set_gender/{gender}')
-def set_gender(gender: str):
+def set_gender(gender: Literal['M', 'F']):
+    results = []
+    with open_rs485() as ser:
+        if not active_blocks:
+            return 'No Active Blocks'
+        for block_id in active_blocks:
+            pkt = bld.build_gender_packet(block_id, gender)
+            ser_write(ser, pkt)
+            response = read_response(ser, block_id, cmdc.CMD_SET_GENDER)
+            if response:
+                results.append({
+                    "block_id": block_id,
+                    "status": "ok"
+                })
+            else: results.append({
+                "block_id": block_id,
+                "status": "no_response"
+            })
+    return{"results": results}
