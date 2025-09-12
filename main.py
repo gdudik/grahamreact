@@ -9,7 +9,7 @@ import builders as bld
 from playsound3 import playsound
 import gpiozero
 from gpiozero.pins.pigpio import PiGPIOFactory
-Device.pin_factory = PiGPIOFactory()
+
 
 
 app = FastAPI()
@@ -29,7 +29,7 @@ def _time_left(deadline: float) -> float:
 active_blocks = []
 
 # --- PINS ---
-
+gpiozero.Device.pin_factory = PiGPIOFactory()
 
 abort_pin = gpiozero.OutputDevice(pin=27)
 abort_pin.off()
