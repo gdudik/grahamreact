@@ -11,9 +11,10 @@ import builders as bld
 from playsound3 import playsound
 
 
+GPIO.setmode(GPIO.BCM)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    GPIO.setmode(GPIO.BCM)
     GPIO.setup(27, GPIO.OUT)
     GPIO.setup(4, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
     GPIO.add_event_detect(4, GPIO.RISING, callback=false_start_alert, bouncetime=200)
