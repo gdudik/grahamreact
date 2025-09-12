@@ -38,7 +38,7 @@ active_blocks = []
 
 # --- PINS ---
 GPIO.setup(27, GPIO.OUT)
-GPIO.setup(4, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+GPIO.setup(16, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
 
 
@@ -51,7 +51,7 @@ def false_start_alert(_):
     playsound('uhoh.wav', block=False)
     print('UHOH HERE COMES A FLOCK OF WAH-WAHS')
 
-GPIO.add_event_detect(4, GPIO.RISING, callback=false_start_alert, bouncetime=200)
+GPIO.add_event_detect(16, GPIO.RISING, callback=false_start_alert, bouncetime=200)
 
 abort_pin(False)
 
