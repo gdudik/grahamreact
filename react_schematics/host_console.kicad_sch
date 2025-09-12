@@ -3024,7 +3024,7 @@
 		(uuid "7de34988-90b1-4eb4-b929-c8e579738174")
 	)
 	(label "HST_FS_ALERT"
-		(at 96.52 44.45 0)
+		(at 96.52 49.53 0)
 		(effects
 			(font
 				(size 1.27 1.27)

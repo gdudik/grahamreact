@@ -7,6 +7,7 @@ from fastapi import FastAPI
 import command_codes as cmdc
 import checksum as cks
 import builders as bld
+from playsound3 import playsound
 
 app = FastAPI()
 
@@ -22,8 +23,6 @@ def _time_left(deadline: float) -> float:
     return t if t > 0 else 0.0
 
 
-
-
 active_blocks = []
 
 # --- PINS ---
@@ -34,9 +33,15 @@ GPIO.setup(27, GPIO.OUT)
 def abort_pin(state: bool):
     GPIO.output(27, state)
 
+GPIO.setup(4, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+
+def false_start_alert(_):
+    playsound('tone.wav', block=False)
+    print('UHOH HERE COMES A FLOCK OF WAH-WAHS')
+
+GPIO.add_event_detect(4, GPIO.RISING, callback=false_start_alert, bouncetime=200)
 
 abort_pin(False)
-
 
 BLOCK_IDS = range(1, 11)  # block IDs 1 through 10
 SERIAL_PORT = '/dev/ttyAMA0'
@@ -95,6 +100,7 @@ def read_one_packet(ser: serial.Serial, deadline: float):
 
     return None
 
+
 def read_response(ser: serial.Serial, expected_block_id: int, return_cmd) -> bytes:
     """
     Wait for a reply packet from a specific block_id/cmd.
@@ -136,19 +142,22 @@ def read_response(ser: serial.Serial, expected_block_id: int, return_cmd) -> byt
         block_id, cmd, length = raw[i+1:i+4]
         packet_end = i + 4 + length + 1
         if packet_end > len(raw):
-            print(f"[DEBUG] Incomplete packet at pos {i}, need {packet_end - len(raw)} more bytes")
+            print(
+                f"[DEBUG] Incomplete packet at pos {i}, need {packet_end - len(raw)} more bytes")
             break
 
         payload = raw[i+4:i+4+length]
         checksum = raw[i+4+length]
         full_wo = raw[i:i+4+length]
         if cks.calc_checksum(full_wo) != checksum:
-            print(f"[DEBUG] Bad checksum at pos {i} (got {checksum:02X}, expected {cks.calc_checksum(full_wo):02X})")
+            print(
+                f"[DEBUG] Bad checksum at pos {i} (got {checksum:02X}, expected {cks.calc_checksum(full_wo):02X})")
             i += 1
             continue
 
         if block_id != expected_block_id or cmd != expected_cmd:
-            print(f"[DEBUG] Packet at pos {i} not for us (block={block_id}, cmd=0x{cmd:02X})")
+            print(
+                f"[DEBUG] Packet at pos {i} not for us (block={block_id}, cmd=0x{cmd:02X})")
             i += 1
             continue
 
@@ -157,7 +166,6 @@ def read_response(ser: serial.Serial, expected_block_id: int, return_cmd) -> byt
 
     print("[DEBUG] No valid response frame parsed")
     return b''
-
 
 
 def read_exact_bytes(ser: serial.Serial, num_bytes: int, timeout_seconds: float = 1.0) -> bytes:
@@ -366,11 +374,10 @@ def get_reports():
             # in this case, payload is calculated_reaction.to_bytes(3, 'big') **in microseconds**
             # status codes: CA (calculated), NG (no gun), NR (no reaction), ND (no data)
             if response:
-                print(response)
                 payload_len = response[3]
                 status_code = response[4:6].decode()
                 reaction = int.from_bytes(
-                    response[6:6+payload_len], byteorder='big', signed=True) / 1_000_000
+                    response[6:9], byteorder='big', signed=True) / 1_000_000
                 if status_code and status_code == 'CA':
                     results.append({
                         "block_id": block_id,
@@ -393,7 +400,6 @@ def get_reports():
                     "status": "no_response"
                 })
         return {"results": results}
-
 
 
 @app.post('/arm')
@@ -433,7 +439,7 @@ def dump_blocks():
 
     results = dump_all_blocks()
     if not (isinstance(results, list) and all(isinstance(r, dict) for r in results)):
-            return {"results": [], "summary": {"note": "Invalid results"}}
+        return {"results": [], "summary": {"note": "Invalid results"}}
 
     # Calculate summary statistics
     successful_dumps = [r for r in results if r["status"] == "success"]
@@ -454,6 +460,7 @@ def dump_blocks():
 def abort_run():
     abort_pin(True)
 
+
 @app.post('/set_gender/{gender}')
 def set_gender(gender: Literal['M', 'F']):
     results = []
@@ -469,8 +476,9 @@ def set_gender(gender: Literal['M', 'F']):
                     "block_id": block_id,
                     "status": "ok"
                 })
-            else: results.append({
-                "block_id": block_id,
-                "status": "no_response"
-            })
-    return{"results": results}
+            else:
+                results.append({
+                    "block_id": block_id,
+                    "status": "no_response"
+                })
+    return {"results": results}

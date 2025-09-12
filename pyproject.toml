@@ -12,6 +12,7 @@ dependencies = [
     "pyserial (>=3.5,<4.0)",
     "fastapi[standard] (>=0.116.1,<0.117.0)",
     "rpi-gpio (>=0.7.1,<0.8.0); platform_system == 'Linux'",
+    "playsound3 (>=3.2.6,<4.0.0)",
 ]
 
 
