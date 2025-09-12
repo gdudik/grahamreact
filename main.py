@@ -4,10 +4,23 @@ import time
 from typing import Literal
 import RPi.GPIO as GPIO
 from fastapi import FastAPI
+from contextlib import asynccontextmanager
 import command_codes as cmdc
 import checksum as cks
 import builders as bld
 from playsound3 import playsound
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(27, GPIO.OUT)
+    GPIO.setup(4, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+    GPIO.add_event_detect(4, GPIO.RISING, callback=false_start_alert, bouncetime=200)
+
+    yield
+
+    GPIO.cleanup()
 
 app = FastAPI()
 
@@ -26,20 +39,19 @@ def _time_left(deadline: float) -> float:
 active_blocks = []
 
 # --- PINS ---
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(27, GPIO.OUT)
+
 
 
 def abort_pin(state: bool):
     GPIO.output(27, state)
 
-GPIO.setup(4, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+
 
 def false_start_alert(_):
-    playsound('tone.wav', block=False)
+    playsound('uhoh.wav', block=False)
     print('UHOH HERE COMES A FLOCK OF WAH-WAHS')
 
-GPIO.add_event_detect(4, GPIO.RISING, callback=false_start_alert, bouncetime=200)
+
 
 abort_pin(False)
 
@@ -324,6 +336,8 @@ def dump_all_blocks():
 
         time.sleep(0.1)  # Small delay between blocks
     return results
+
+
 
 
 @app.post('/ping')
