@@ -2,23 +2,15 @@ import serial
 import serial.rs485
 import time
 from typing import Literal
-import RPi.GPIO as GPIO
 from fastapi import FastAPI
-from contextlib import asynccontextmanager
 import command_codes as cmdc
 import checksum as cks
 import builders as bld
 from playsound3 import playsound
+import gpiozero
+from gpiozero.pins.pigpio import PiGPIOFactory
+Device.pin_factory = PiGPIOFactory()
 
-
-GPIO.setmode(GPIO.BCM)
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-
-    yield
-
-    GPIO.cleanup()
 
 app = FastAPI()
 
@@ -37,23 +29,19 @@ def _time_left(deadline: float) -> float:
 active_blocks = []
 
 # --- PINS ---
-GPIO.setup(27, GPIO.OUT)
-GPIO.setup(16, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
 
+abort_pin = gpiozero.OutputDevice(pin=27)
+abort_pin.off()
 
-def abort_pin(state: bool):
-    GPIO.output(27, state)
+false_start_alert_pin = gpiozero.Button(4, pull_up=False)
 
-
-
-def false_start_alert(_):
+def false_start_alert():
     playsound('uhoh.wav', block=False)
     print('UHOH HERE COMES A FLOCK OF WAH-WAHS')
 
-GPIO.add_event_detect(16, GPIO.RISING, callback=false_start_alert, bouncetime=200)
+false_start_alert_pin.when_activated = false_start_alert
 
-abort_pin(False)
 
 BLOCK_IDS = range(1, 11)  # block IDs 1 through 10
 SERIAL_PORT = '/dev/ttyAMA0'
