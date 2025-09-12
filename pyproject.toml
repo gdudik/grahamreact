@@ -32,5 +32,6 @@ api = "fastapi dev main.py --host 0.0.0.0"
 [tool.poe.tasks.bmp]
 shell = """
     cp command_codes.py ./block/lib
-    mpremote cp ./block :
+    mpremote rm -r :
+    mpremote cp -r ./block :
 """
