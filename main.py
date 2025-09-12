@@ -291,7 +291,7 @@ def read_dump_chunks(ser: serial.Serial, expected_block_id: int, timeout_seconds
 
 def dump_all_blocks():
     """Send dump command to all blocks and save received files."""
-    abort_pin(False)
+    abort_pin.off()
     results = []
 
     with open_rs485() as ser:
@@ -360,7 +360,7 @@ def dump_all_blocks():
 @app.post('/ping')
 def ping_all_blocks():
     global active_blocks
-    abort_pin(False)
+    abort_pin.off()
     active_blocks = []
     results = []
 
@@ -436,7 +436,7 @@ def get_reports():
 @app.post('/arm')
 def arm():
     results = []
-    abort_pin(False)
+    abort_pin.off()
     with open_rs485() as ser:
         if not active_blocks:
             return 'No Active Blocks'
@@ -489,7 +489,7 @@ def dump_blocks():
 
 @app.post('/abort')
 def abort_run():
-    abort_pin(True)
+    abort_pin.on()
 
 
 @app.post('/set_gender/{gender}')
